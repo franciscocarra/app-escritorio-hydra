@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hydra | Perfil Clínico</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-container">
+        
+        <div class="sidebar">
+            <div class="logo">HYDRA</div>
+            <span style="color: var(--text-muted); font-size: 12px;">Dr. Francisco Carasco</span>
+            <nav><p class="active"><i class="fa-solid fa-users"></i> Pacientes</p></nav>
+            <div style="margin-top: auto;"><p onclick="window.location.href='login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
+        </div>
+
+        <div class="content">
+            <header class="header-dash">
+                <div>
+                    <h1>Expediente Clínico Centralizado</h1>
+                    <span style="color: var(--text-muted); font-size: 13px;">Plataforma de Control Robótico y Telemetría</span>
+                </div>
+            </header>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <button class="btn-action outline" onclick="window.location.href='dashboard.html'"><i class="fa-solid fa-arrow-left"></i> Volver a pacientes</button>
+            </div>
+            
+            <div class="profile-card">
+                <div class="profile-header-bg">
+                    <div class="profile-avatar" id="perfil-avatar-container" style="background: var(--primary); display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                        <span id="perfil-iniciales" style="font-size: 45px; color: white; font-weight: bold;"></span>
+                    </div>
+                    <h2 id="perfil-nombre-completo">Cargando...</h2>
+                    <p id="perfil-rut-header">RUN: Cargando...</p>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item"><span class="label">RUN Paciente</span><span class="value" id="perfil-rut-detalle"></span></div>
+                    <div class="info-item"><span class="label">Contacto Telefónico</span><span class="value" id="perfil-telefono-detalle"></span></div>
+                    <div class="info-item"><span class="label">Infraestructura</span><span class="value">Supabase (PostgreSQL)</span></div>
+                    <div class="info-item"><span class="label">Nivel de Amputación</span><span class="value">Amputación Transradial (Antebrazo Medio)</span></div>
+                    <div class="info-item"><span class="label">Modelo de Prótesis</span><span class="value">Hydra Biónica RX-7</span></div>
+                    <div class="info-item"><span class="label">Diagnotico</span><span class="value">Dolor Fantasma Reportado: <span class="badge bg-danger">Alto</span></span></div>
+                </div>
+            </div>
+
+            <div class="section-title"><i class="fa-solid fa-satellite-dish" style="color: var(--success);"></i> Módulo 5: Telemetría del Dispositivo & Ubicación GPS</div>
+                <div class="stat-card-basic" style="padding: 25px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        
+                        <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; text-align: center; background: #f8fafc; display: flex; flex-direction: column; justify-content: center;">
+                            <i class="fa-solid fa-battery-three-quarters" style="font-size: 50px; color: var(--success); margin-bottom: 15px;"></i>
+                            <h4 style="margin:0; color: var(--text-muted); font-size: 14px; text-transform: uppercase;">Batería Prótesis Hydra</h4>
+                            <h1 style="margin:10px 0 0 0; color: var(--text-main); font-size: 48px;">82%</h1>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 10px;"><i class="fa-solid fa-check-circle" style="color: var(--success);"></i> Voltaje Estable (BLE)</p>
+                        </div>
+                        
+                        <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; background: #f8fafc;">
+                            <h4 style="margin:0; color: var(--text-main); font-size: 14px; text-transform: uppercase; margin-bottom: 10px;"><i class="fa-solid fa-map-location-dot" style="color: var(--primary);"></i> Ubicación Actual (GPS En Vivo)</h4>
+                            
+                            <div class="map-mockup">
+                                <div class="map-grid"></div>
+                                <div class="map-pin">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <div class="map-label-bg">Prótesis PAC-19283746</div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                                <span>Coordenadas: -33.6133, -70.5750</span>
+                                <span>Última actualización: Hace 30 seg</span>
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-muted); margin: 5px 0 0 0; text-align: right;">Dirección: Puente Alto, Santiago, Chile.</p>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="section-title"><i class="fa-solid fa-chart-line" style="color: var(--info);"></i> Módulo 4: Evolución y Metas de Movilidad Mecánica</div>
+                <div class="goal-tracker stat-card-basic">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 500;">
+                        <span>Movilidad Inicial: 50%</span>
+                        <span style="color: var(--primary);">Progreso Actual: 65%</span>
+                        <span style="color: var(--danger);">Meta Hydra: 80%</span>
+                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width: 65%;">65%</div><div class="meta-marker"></div></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;"><span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Restricción activa: Giro bloqueado a 360°.</span><span class="meta-label-fixed">Meta (80%)</span></div>
+                </div>
+
+                <div class="section-title"><i class="fa-solid fa-share-nodes" style="color: var(--primary);"></i> Módulo 1: Contactos Familiares para Alertas</div>
+                <div class="table-container"><table class="patient-table"><thead><tr><th>Nombre Familiar</th><th>Vínculo</th><th>Teléfono Alertas</th><th>Canal de Notificación</th><th>Acceso Interfaz</th></tr></thead></table></div>
+
+            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+                <span><i class="fa-solid fa-file-invoice-dollar" style="color: var(--text-muted);"></i> Documentación y Exámenes</span>
+                <div style="display: flex; gap: 10px; align-items: center; font-size: 13px;">
+                    <input type="date" id="filtro-fecha" style="padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onchange="filtrarPorFecha(this.value)">
+                    <button class="btn-action" id="btn-limpiar-filtro" style="display: none; background-color: var(--danger); padding: 6px 12px;" onclick="limpiarFiltro()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="patient-table">
+                    <thead><tr><th>Fecha Carga</th><th>Nombre Documento</th><th style="text-align: center;">Acción</th></tr></thead>
+                    <tbody id="tabla-documentos"><tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cargando documentos...</td></tr></tbody>
+                </table>
+            </div>
+        </div> 
+    </div> 
+    <script src="../js/perfil.js"></script>
+</body>
+</html>

@@ -11,7 +11,7 @@ function createWindow() {
     }
   });
 
-  win.loadFile('Index.html');
+  win.loadFile('Vista/login.html');
 }
 
 app.whenReady().then(createWindow);

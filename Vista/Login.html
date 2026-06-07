@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hydra | Login</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="login-view">
+        <div class="login-container">
+            <i class="fa-solid fa-circle-user" style="font-size: 70px; margin-bottom: 15px;"></i>
+            <h1>Bienvenido</h1>
+            <p>Ingresa tus credenciales médicas de Hydra</p>
+            <div class="input-group"><div class="input-icon-wrapper"><i class="fa-regular fa-id-card"></i><input type="text" placeholder="RUT Profesional"></div></div>
+            <div class="input-group"><div class="input-icon-wrapper"><i class="fa-solid fa-lock"></i><input type="password" placeholder="Contraseña Supabase"></div></div>
+            
+            <button class="btn-login" onclick="iniciarSesion()">Iniciar Sesión <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+    <script src="../js/login.js"></script>
+</body>
+</html>

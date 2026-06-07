@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hydra | Pacientes</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-container">
+        
+        <div class="sidebar">
+            <div class="logo">HYDRA</div>
+            <span style="color: var(--text-muted); font-size: 12px;">Dr. Francisco Carasco</span>
+            <nav>
+                <p class="active"><i class="fa-solid fa-users"></i> Pacientes</p>
+                <p><i class="fa-solid fa-heart-pulse"></i> Monitor Prótesis</p>
+            </nav>
+            <div style="margin-top: auto;"><p onclick="window.location.href='login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
+        </div>
+
+        <div class="content">
+            <header class="header-dash">
+                <div>
+                    <h1>Directorio de Pacientes</h1>
+                    <span style="color: var(--text-muted); font-size: 13px;">Plataforma de Control Robótico y Telemetría</span>
+                </div>
+            </header>
+
+            <div class="table-container">
+                <table class="patient-table">
+                    <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+                    <tbody id="cuerpo-tabla-pacientes">
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes desde la base de datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div> 
+    </div> 
+    <script src="../js/dashboard.js"></script>
+</body>
+</html>

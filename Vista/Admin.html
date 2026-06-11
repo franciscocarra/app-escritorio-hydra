@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hydra | Administración</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilo rápido para los inputs del formulario */
+        .form-input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; margin-top: 5px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        
+        <div class="sidebar">
+            <div class="logo">HYDRA</div>
+            <span style="color: var(--warning); font-size: 12px; font-weight: bold;"><i class="fa-solid fa-shield-halved"></i> Panel Administrador</span>
+            <nav>
+                <p class="active" onclick="window.scrollTo(0,0)"><i class="fa-solid fa-folder-open"></i> Directorios</p>
+                <p onclick="abrirModalAgregar('paciente')"><i class="fa-solid fa-user-plus"></i> Agregar Paciente</p>
+                <p onclick="abrirModalAgregar('empleado')"><i class="fa-solid fa-user-tie"></i> Agregar Empleado</p>
+            </nav>
+            <div style="margin-top: auto;">
+                <p onclick="window.location.href='Login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p>
+            </div>
+        </div>
+
+        <div class="content">
+            <header class="header-dash">
+                <div>
+                    <h1 id="titulo-admin">Gestión de Directorios</h1>
+                    <span style="color: var(--text-muted); font-size: 13px;">Plataforma de Control Robótico y Telemetría</span>
+                </div>
+            </header>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-action" id="btn-tab-pacientes" onclick="cambiarDirectorio('pacientes')"><i class="fa-solid fa-users"></i> Directorio Pacientes</button>
+                    <button class="btn-action outline" id="btn-tab-empleados" onclick="cambiarDirectorio('empleados')"><i class="fa-solid fa-user-doctor"></i> Directorio Empleados</button>
+                </div>
+                
+                <div id="filtros-pacientes" style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-filter"></i> Filtrar:</span>
+                    <input type="text" id="filtro-rut-pac" placeholder="Buscar por RUT..." style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onkeyup="filtrarPacientesAdmin()">
+                </div>
+
+                <div id="filtros-empleados" style="display: none; gap: 10px; align-items: center;">
+                    <span style="font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-filter"></i> Filtrar:</span>
+                    <input type="text" id="filtro-rut-emp" placeholder="RUT: 12.345.678-9" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onkeyup="aplicarFiltros()">
+                    <select id="filtro-rol-emp" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onchange="aplicarFiltros()">
+                        <option value="">Todos los Roles</option>
+                        <option value="Medico">Médico</option>
+                        <option value="Admin">Administrador</option>
+                        <option value="Kinesiologo">Kinesiólogo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-container" id="contenedor-pacientes">
+                <table class="patient-table">
+                    <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+                    <tbody id="cuerpo-tabla-pacientes">
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes desde la base de datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container" id="contenedor-empleados" style="display: none;">
+                <table class="patient-table">
+                    <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Rol en Sistema</th><th>Acciones</th></tr></thead>
+                    <tbody id="cuerpo-tabla-empleados">
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando empleados desde la base de datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div> 
+        
+        <div id="modal-agregar-paciente" class="modal-overlay">
+            <div class="modal-content" style="width: 600px;">
+                <h2 style="margin-top: 0; color: var(--text-main);"><i class="fa-solid fa-user-plus"></i> Registrar Nuevo Paciente</h2>
+                <span style="color: var(--text-muted); font-size: 13px;">Los datos se guardarán en la base de datos de Hydra.</span>
+                
+                <form id="form-nuevo-paciente" style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div><label style="font-size: 12px; font-weight: bold;">RUT (RUN)</label><input type="text" id="nuevo-pac-rut" class="form-input" placeholder="Ej: 19.283.746-5" required></div>
+                    <div><label style="font-size: 12px; font-weight: bold;">Teléfono</label><input type="text" id="nuevo-pac-tel" class="form-input" placeholder="Ej: +56912345678" required></div>
+                    
+                    <div><label style="font-size: 12px; font-weight: bold;">Nombre</label><input type="text" id="nuevo-pac-nombre" class="form-input" placeholder="Ej: Juan" required></div>
+                    <div><label style="font-size: 12px; font-weight: bold;">Género</label>
+                        <select id="nuevo-pac-genero" class="form-input">
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                            <option value="O">Otro</option>
+                        </select>
+                    </div>
+
+                    <div><label style="font-size: 12px; font-weight: bold;">Apellido Paterno</label><input type="text" id="nuevo-pac-apPaterno" class="form-input" placeholder="Ej: Pérez" required></div>
+                    <div><label style="font-size: 12px; font-weight: bold;">Apellido Materno</label><input type="text" id="nuevo-pac-apMaterno" class="form-input" placeholder="Ej: Soto" required></div>
+                    
+                    <div style="grid-column: span 2;"><label style="font-size: 12px; font-weight: bold;">Correo Electrónico</label><input type="email" id="nuevo-pac-correo" class="form-input" placeholder="ejemplo@correo.com"></div>
+                    <div style="grid-column: span 2;"><label style="font-size: 12px; font-weight: bold;">Contraseña Temp. (Acceso Paciente)</label><input type="password" id="nuevo-pac-password" class="form-input" placeholder="Contraseña provisoria"></div>
+                    
+                    <div><label style="font-size: 12px; font-weight: bold;">Edad</label><input type="number" id="nuevo-pac-edad" class="form-input" placeholder="Años"></div>
+                    <div>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;"><label style="font-size: 12px; font-weight: bold;">Altura (cm)</label><input type="number" id="nuevo-pac-altura" class="form-input" placeholder="Ej: 175"></div>
+                            <div style="flex: 1;"><label style="font-size: 12px; font-weight: bold;">Peso (kg)</label><input type="number" id="nuevo-pac-peso" class="form-input" placeholder="Ej: 70"></div>
+                        </div>
+                    </div>
+                </form>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                    <button class="btn-action outline" onclick="cerrarModalAgregar('paciente')">Cancelar</button>
+                    <button class="btn-action" style="background-color: var(--success);" onclick="guardarNuevoPaciente()"><i class="fa-solid fa-floppy-disk"></i> Guardar Paciente</button>
+                </div>
+            </div>
+        </div>
+
+    </div> 
+    
+    <script src="../js/admin.js"></script>
+</body>
+</html>

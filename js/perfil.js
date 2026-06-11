@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Si alguien entra directo a perfil.html sin seleccionar paciente, lo devolvemos
     if (!dataGuardada) {
-        window.location.href = '../Vista/dashboard.html';
+        window.location.href = '../Vista/home.html';
         return;
     }
 

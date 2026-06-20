@@ -7,7 +7,6 @@ let listaPacientesOriginal = [];
 // ⚠️ ACTUALIZA LA CONTRASEÑA DE SPRING BOOT HOY AQUÍ ⚠️
 const credencialesGlobales = btoa(`user:dc20f0e4-b1bc-4969-a01c-cbb8282c805f`); 
 
-// Al cargar la vista admin, cargamos la tabla de pacientes por defecto
 document.addEventListener("DOMContentLoaded", () => {
     cargarPacientesAdmin();
 });
@@ -28,7 +27,6 @@ async function encriptarDato(textoLimpio) {
     if (!textoLimpio) return null;
     try {
         const url = `http://localhost:8081/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
-        // ¡EL CAMBIO ESTÁ AQUÍ! Ahora usamos GET para coincidir con el @GetMapping de Java
         const res = await fetch(url, { method: 'GET' }); 
         
         if (!res.ok) {
@@ -55,10 +53,8 @@ function cambiarDirectorio(tipo) {
     if (tipo === 'pacientes') {
         btnPacientes.classList.remove('outline');
         btnEmpleados.classList.add('outline');
-        
         contPacientes.style.display = 'block';
         contEmpleados.style.display = 'none';
-        
         filtrosPacientes.style.display = 'flex'; 
         filtrosEmpleados.style.display = 'none'; 
 
@@ -66,10 +62,8 @@ function cambiarDirectorio(tipo) {
     } else if (tipo === 'empleados') {
         btnEmpleados.classList.remove('outline');
         btnPacientes.classList.add('outline');
-        
         contEmpleados.style.display = 'block';
         contPacientes.style.display = 'none';
-        
         filtrosEmpleados.style.display = 'flex'; 
         filtrosPacientes.style.display = 'none'; 
 
@@ -81,7 +75,7 @@ function abrirModalAgregar(tipo) {
     if (tipo === 'paciente') {
         document.getElementById('modal-agregar-paciente').style.display = 'flex';
     } else if (tipo === 'empleado') {
-        alert("En construcción: Módulo de empleados en espera de que se cree el Controlador en Java.");
+        document.getElementById('modal-agregar-empleado').style.display = 'flex';
     }
 }
 
@@ -89,11 +83,14 @@ function cerrarModalAgregar(tipo) {
     if (tipo === 'paciente') {
         document.getElementById('modal-agregar-paciente').style.display = 'none';
         document.getElementById('form-nuevo-paciente').reset(); 
+    } else if (tipo === 'empleado') {
+        document.getElementById('modal-agregar-empleado').style.display = 'none';
+        document.getElementById('form-nuevo-empleado').reset(); 
     }
 }
 
 // ==========================================
-// MÓDULO: PACIENTES (GET, POST, FILTER)
+// MÓDULO: PACIENTES 
 // ==========================================
 async function cargarPacientesAdmin() {
     const urlAPI = 'http://localhost:8080/api/pacientes';
@@ -142,26 +139,21 @@ function renderPacientes(lista) {
 
 function filtrarPacientesAdmin() {
     const rutBuscado = document.getElementById('filtro-rut-pac').value.toLowerCase().trim();
-    
     const pacientesFiltrados = listaPacientesOriginal.filter(pac => {
         return pac.runP_Legible.toLowerCase().includes(rutBuscado);
     });
-
     renderPacientes(pacientesFiltrados);
 }
 
 async function guardarNuevoPaciente() {
-    // 1. Obtener valores del formulario
     const rutInput = document.getElementById('nuevo-pac-rut').value.trim();
     const telInput = document.getElementById('nuevo-pac-tel').value.trim();
     const nombreInput = document.getElementById('nuevo-pac-nombre').value.trim();
     const apPaternoInput = document.getElementById('nuevo-pac-apPaterno').value.trim();
     const apMaternoInput = document.getElementById('nuevo-pac-apMaterno').value.trim();
     const generoInput = document.getElementById('nuevo-pac-genero').value;
-    
     const correoInput = document.getElementById('nuevo-pac-correo').value.trim();
     const passInput = document.getElementById('nuevo-pac-password').value.trim();
-    
     const edadInput = document.getElementById('nuevo-pac-edad').value;
     const alturaInput = document.getElementById('nuevo-pac-altura').value;
     const pesoInput = document.getElementById('nuevo-pac-peso').value;
@@ -172,13 +164,11 @@ async function guardarNuevoPaciente() {
     }
 
     try {
-        // 2. Intentamos encriptar. Si esto falla, saltará directo al bloque catch de abajo.
         const rutEncriptado = await encriptarDato(rutInput);
         const telEncriptado = await encriptarDato(telInput);
         const correoEncriptado = correoInput ? await encriptarDato(correoInput) : null;
         const passEncriptado = passInput ? await encriptarDato(passInput) : null;
 
-        // 3. Estructura JSON exacta para Spring Boot
         const pacienteData = {
             runP: rutEncriptado,
             nombre: nombreInput,
@@ -193,9 +183,7 @@ async function guardarNuevoPaciente() {
             telefono: telEncriptado
         };
 
-        // 4. Mandamos los datos a guardar (API 8080)
-        const urlAPI = 'http://localhost:8080/api/pacientes';
-        const res = await fetch(urlAPI, {
+        const res = await fetch('http://localhost:8080/api/pacientes', {
             method: 'POST',
             headers: {
                 'Authorization': `Basic ${credencialesGlobales}`,
@@ -213,14 +201,13 @@ async function guardarNuevoPaciente() {
         }
 
     } catch(errorSeguridad) {
-        // Si el motor 8081 falla, atrapamos el error aquí y NO hacemos el POST al 8080
         console.error(errorSeguridad);
-        alert("⚠️ ALERTA DE SEGURIDAD: No se pudo conectar con el motor de encriptación (Puerto 8081). El guardado ha sido bloqueado para proteger los datos del paciente.");
+        alert("⚠️ ALERTA DE SEGURIDAD: No se pudo conectar con el motor de encriptación (Puerto 8081).");
     }
 }
 
 // ==========================================
-// MÓDULO: EMPLEADOS (PENDIENTE DE BACKEND)
+// MÓDULO: EMPLEADOS 
 // ==========================================
 async function cargarEmpleadosAdmin() {
     const urlAPI = 'http://localhost:8080/api/empleados'; 
@@ -232,15 +219,20 @@ async function cargarEmpleadosAdmin() {
         const res = await fetch(urlAPI, { headers: { 'Authorization': `Basic ${credencialesGlobales}` }});
         if (res.ok) {
             const cifrados = await res.json(); 
-            const promesas = cifrados.map(async (emp) => {
-                const rutReal = await desencriptarDato(emp.runE || emp.run);
+            
+            // 🛑 REGLA DE NEGOCIO: Filtramos a los Administradores (rol 1) para que no se muestren
+            const sinAdmins = cifrados.filter(emp => emp.rolIdRol !== 1);
+
+            // Ahora solo desencriptamos a los médicos, autorizadores y cuidadores
+            const promesas = sinAdmins.map(async (emp) => {
+                const rutReal = await desencriptarDato(emp.run);
                 return { ...emp, rutLegible: rutReal };
             });
             
             listaEmpleadosOriginal = await Promise.all(promesas);
             renderEmpleados(listaEmpleadosOriginal);
         } else {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--danger);">La API de empleados aún no está disponible (Código: ${res.status})</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--danger);">Error conectando a la API de Empleados.</td></tr>`;
         }
     } catch (e) { 
         console.error(e);
@@ -259,11 +251,13 @@ function renderEmpleados(lista) {
 
     lista.forEach(emp => {
         const apP = emp.apellidoPaterno || ''; const apM = emp.apellidoMaterno || '';
-        const rol = emp.rol || 'Sin Rol';
-
+        
+        let rol = 'Sin Rol';
         let badgeClass = 'bg-info'; 
-        if(rol.toLowerCase().includes('admin')) badgeClass = 'bg-warning'; 
-        if(rol.toLowerCase().includes('medico') || rol.toLowerCase().includes('médico')) badgeClass = 'bg-success'; 
+
+        if (emp.rolIdRol === 2) { rol = 'Médico'; badgeClass = 'bg-success'; }
+        else if (emp.rolIdRol === 3) { rol = 'Autorizador'; badgeClass = 'bg-primary'; }
+        else if (emp.rolIdRol === 4) { rol = 'Cuidador'; badgeClass = 'bg-secondary'; }
 
         const fila = `<tr>
             <td>${emp.rutLegible}</td>
@@ -285,11 +279,71 @@ function aplicarFiltros() {
 
     const empleadosFiltrados = listaEmpleadosOriginal.filter(emp => {
         const coincideRut = emp.rutLegible.toLowerCase().includes(rutBuscado);
-        const rolEmpleado = (emp.rol || '').toLowerCase();
-        const coincideRol = (rolBuscado === '') || rolEmpleado.includes(rolBuscado);
+        
+        // Convertimos el ID al formato de búsqueda ("medico", "autorizador", "cuidador")
+        let rolTexto = '';
+        if (emp.rolIdRol === 2) rolTexto = 'medico';
+        if (emp.rolIdRol === 3) rolTexto = 'autorizador';
+        if (emp.rolIdRol === 4) rolTexto = 'cuidador';
+
+        const coincideRol = (rolBuscado === '') || rolTexto === rolBuscado;
 
         return coincideRut && coincideRol;
     });
 
     renderEmpleados(empleadosFiltrados);
+}
+
+async function guardarNuevoEmpleado() {
+    const rutInput = document.getElementById('nuevo-emp-rut').value.trim();
+    const nombreInput = document.getElementById('nuevo-emp-nombre').value.trim();
+    const apPaternoInput = document.getElementById('nuevo-emp-apPaterno').value.trim();
+    const apMaternoInput = document.getElementById('nuevo-emp-apMaterno').value.trim();
+    const correoInput = document.getElementById('nuevo-emp-correo').value.trim();
+    const passwordInput = document.getElementById('nuevo-emp-password').value.trim();
+    const rolInput = document.getElementById('nuevo-emp-rol').value;
+    const sucursalInput = document.getElementById('nuevo-emp-sucursal').value;
+
+    if(!rutInput || !nombreInput || !apPaternoInput || !correoInput || !passwordInput) {
+        alert("Por favor, llena todos los campos obligatorios del empleado.");
+        return;
+    }
+
+    try {
+        const rutEncriptado = await encriptarDato(rutInput);
+        const correoEncriptado = await encriptarDato(correoInput);
+        const passwordEncriptado = await encriptarDato(passwordInput);
+
+        const empleadoData = {
+            run: rutEncriptado,
+            nombre: nombreInput,
+            apellidoPaterno: apPaternoInput,
+            apellidoMaterno: apMaternoInput,
+            correo: correoEncriptado,
+            password: passwordEncriptado,
+            rolIdRol: parseInt(rolInput),
+            sucursalIdSucursal: parseInt(sucursalInput)
+        };
+
+        const res = await fetch('http://localhost:8080/api/empleados', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${credencialesGlobales}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(empleadoData)
+        });
+
+        if(res.ok || res.status === 201) {
+            alert("¡Empleado guardado exitosamente!");
+            cerrarModalAgregar('empleado');
+            cargarEmpleadosAdmin(); 
+        } else {
+            alert("Error al guardar empleado en el servidor. Código HTTP: " + res.status);
+        }
+
+    } catch(errorSeguridad) {
+        console.error(errorSeguridad);
+        alert("⚠️ ALERTA DE SEGURIDAD: No se pudo conectar con el motor de encriptación. Guardado bloqueado.");
+    }
 }

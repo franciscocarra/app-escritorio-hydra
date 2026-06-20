@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DevTool | Generador de Admins</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/style-dev.css">
+</head>
+<body>
+
+    <button class="volver-btn" onclick="window.location.href='Login.html'">
+        <i class="fa-solid fa-arrow-left"></i> Volver al Login
+    </button>
+
+    <div class="panel-container">
+        <div class="card">
+            <h2><i class="fa-solid fa-user-shield"></i> Alta de Super Admin</h2>
+            <p class="subtitle">La creación se inyectará directamente en la base de datos a través de la API segura.</p>
+
+            <div class="form-grid">
+                <div class="full-width">
+                    <label>RUT (Con guion)</label> 
+                    <input type="text" id="dev-rut" placeholder="Ej: 11.222.333-4">
+                    <div id="error-rut" class="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> RUT inválido según formato chileno.</div>
+                </div>
+
+                <div>
+                    <label>Nombre</label> 
+                    <input type="text" id="dev-nombre" placeholder="Nombre">
+                </div>
+                <div>
+                    <label>Contraseña</label> 
+                    <input type="text" id="dev-pass" placeholder="Clave segura">
+                </div>
+
+                <div>
+                    <label>Apellido Paterno</label> 
+                    <input type="text" id="dev-appat" placeholder="Ap. Paterno">
+                </div>
+                <div>
+                    <label>Apellido Materno</label> 
+                    <input type="text" id="dev-apmat" placeholder="Ap. Materno">
+                </div>
+                
+                <div class="full-width">
+                    <label>Correo Electrónico Institucional</label> 
+                    <input type="email" id="dev-correo" placeholder="admin@hospital.cl">
+                    <div id="error-correo" class="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> Formato de correo inválido.</div>
+                </div>
+            </div>
+
+            <button id="btn-generar" class="btn-primary" onclick="crearAdminDirecto()">
+                <i class="fa-solid fa-server"></i> Registrar y Encriptar
+            </button>
+        </div>
+
+        <div id="caja-credenciales" class="success-card">
+            <h3><i class="fa-solid fa-circle-check"></i> ¡Administrador Creado!</h3>
+            <p class="success-subtitle">El usuario ya fue inyectado en la BD. Usa estos datos en el Login.</p>
+            
+            <div class="data-row">
+                <label>CORREO</label>
+                <span id="res-correo"></span>
+            </div>
+            
+            <div class="data-row">
+                <label>CONTRASEÑA</label>
+                <span id="res-pass"></span>
+            </div>
+
+            <button id="btn-copiar" class="btn-copiar" onclick="copiarCredenciales()">
+                <i class="fa-regular fa-copy"></i> Copiar para Login
+            </button>
+        </div>
+    </div>
+
+    <script src="../js/app-dev.js"></script>
+</body>
+</html>

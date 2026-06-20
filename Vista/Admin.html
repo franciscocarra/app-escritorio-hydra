@@ -52,9 +52,9 @@
                     <input type="text" id="filtro-rut-emp" placeholder="RUT: 12.345.678-9" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onkeyup="aplicarFiltros()">
                     <select id="filtro-rol-emp" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" onchange="aplicarFiltros()">
                         <option value="">Todos los Roles</option>
-                        <option value="Medico">Médico</option>
-                        <option value="Admin">Administrador</option>
-                        <option value="Kinesiologo">Kinesiólogo</option>
+                        <option value="medico">Médico</option>
+                        <option value="autorizador">Autorizador</option>
+                        <option value="cuidador">Cuidador</option>
                     </select>
                 </div>
             </div>
@@ -79,7 +79,7 @@
 
         </div> 
         
-        <div id="modal-agregar-paciente" class="modal-overlay">
+        <div id="modal-agregar-paciente" class="modal-overlay" style="display: none;">
             <div class="modal-content" style="width: 600px;">
                 <h2 style="margin-top: 0; color: var(--text-main);"><i class="fa-solid fa-user-plus"></i> Registrar Nuevo Paciente</h2>
                 <span style="color: var(--text-muted); font-size: 13px;">Los datos se guardarán en la base de datos de Hydra.</span>
@@ -115,6 +115,41 @@
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
                     <button class="btn-action outline" onclick="cerrarModalAgregar('paciente')">Cancelar</button>
                     <button class="btn-action" style="background-color: var(--success);" onclick="guardarNuevoPaciente()"><i class="fa-solid fa-floppy-disk"></i> Guardar Paciente</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-agregar-empleado" class="modal-overlay" style="display: none;">
+            <div class="modal-content" style="width: 600px;">
+                <h2 style="margin-top: 0; color: var(--text-main);"><i class="fa-solid fa-user-tie"></i> Registrar Nuevo Empleado</h2>
+                <span style="color: var(--text-muted); font-size: 13px;">Los datos se guardarán de forma segura en la base de datos de Hydra.</span>
+                
+                <form id="form-nuevo-empleado" style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div><label style="font-size: 12px; font-weight: bold;">RUT (RUN)</label><input type="text" id="nuevo-emp-rut" class="form-input" placeholder="Ej: 19.283.746-5" required></div>
+                    <div><label style="font-size: 12px; font-weight: bold;">Nombre</label><input type="text" id="nuevo-emp-nombre" class="form-input" placeholder="Ej: Carlos" required></div>
+                    
+                    <div><label style="font-size: 12px; font-weight: bold;">Apellido Paterno</label><input type="text" id="nuevo-emp-apPaterno" class="form-input" placeholder="Ej: Silva" required></div>
+                    <div><label style="font-size: 12px; font-weight: bold;">Apellido Materno</label><input type="text" id="nuevo-emp-apMaterno" class="form-input" placeholder="Ej: Rojas" required></div>
+                    
+                    <div style="grid-column: span 2;"><label style="font-size: 12px; font-weight: bold;">Correo Electrónico</label><input type="email" id="nuevo-emp-correo" class="form-input" placeholder="ejemplo@hospital.cl" required></div>
+                    
+                    <div><label style="font-size: 12px; font-weight: bold;">Contraseña</label><input type="password" id="nuevo-emp-password" class="form-input" placeholder="Contraseña de acceso" required></div>
+                    
+                    <div>
+                        <label style="font-size: 12px; font-weight: bold;">Rol del Empleado</label>
+                        <select id="nuevo-emp-rol" class="form-input" required>
+                            <option value="2">Médico</option>
+                            <option value="3">Autorizador</option>
+                            <option value="4">Cuidador</option>
+                        </select>
+                    </div>
+                    
+                    <div style="grid-column: span 2;"><label style="font-size: 12px; font-weight: bold;">ID Sucursal</label><input type="number" id="nuevo-emp-sucursal" class="form-input" value="1" placeholder="Ej: 1" required></div>
+                </form>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                    <button class="btn-action outline" onclick="cerrarModalAgregar('empleado')">Cancelar</button>
+                    <button class="btn-action" style="background-color: var(--success);" onclick="guardarNuevoEmpleado()"><i class="fa-solid fa-floppy-disk"></i> Guardar Empleado</button>
                 </div>
             </div>
         </div>

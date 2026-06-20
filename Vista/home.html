@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Hydra | Pacientes</title>
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/tarjeta-perfil.css"> 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -12,32 +13,155 @@
         
         <div class="sidebar">
             <div class="logo">HYDRA</div>
-            <span style="color: var(--text-muted); font-size: 12px;">Dr. Francisco Carasco</span>
+            <span id="doc-name-sidebar" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">Cargando Médico...</span>
             <nav>
-                <p class="active"><i class="fa-solid fa-users"></i> Pacientes</p>
+                <p class="active" onclick="volverAlDirectorio()" style="cursor: pointer;"><i class="fa-solid fa-users"></i> Pacientes</p>
                 <p><i class="fa-solid fa-heart-pulse"></i> Monitor Prótesis</p>
             </nav>
-            <div style="margin-top: auto;"><p onclick="window.location.href='login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
+            <div style="margin-top: auto;"><p onclick="window.location.href='Login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
         </div>
 
         <div class="content">
-            <header class="header-dash">
-                <div>
-                    <h1>Directorio de Pacientes</h1>
-                    <span style="color: var(--text-muted); font-size: 13px;">Plataforma de Control Robótico y Telemetría</span>
-                </div>
-            </header>
+            
+            <div id="vista-directorio">
+                <header class="header-dash">
+                    <div>
+                        <h1>Directorio de Pacientes</h1>
+                        <span style="color: var(--text-muted); font-size: 13px;">Plataforma de Control Robótico y Telemetría</span>
+                    </div>
+                </header>
 
-            <div class="table-container">
-                <table class="patient-table">
-                    <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
-                    <tbody id="cuerpo-tabla-pacientes">
-                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes desde la base de datos...</td></tr>
+                <div class="table-container">
+                    <table class="patient-table">
+                        <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
+                        <tbody id="cuerpo-tabla-pacientes">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes desde la base de datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="vista-perfil" style="display: none;">
+                <button class="btn-action outline" style="margin-bottom: 25px; border: none; padding-left: 0;" onclick="volverAlDirectorio()">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a pacientes
+                </button>
+
+                <div class="header-perfil-paciente">
+                    <div class="avatar-iniciales" id="pac-iniciales">--</div>
+                    <h2 style="margin: 0; font-size: 26px; font-weight: 600; text-transform: uppercase;" id="pac-nombre-completo">Cargando...</h2>
+                    <p style="margin: 6px 0 0 0; font-size: 13px; opacity: 0.95; font-weight: 500;" id="pac-rut-header">RUN: --------</p>
+                </div>
+                
+                <div class="grid-datos-clinicos">
+                    <div class="bloque-dato"><label>Run Paciente</label><p id="pac-rut-grid">--------</p></div>
+                    <div class="bloque-dato"><label>Contacto Telefónico</label><p id="pac-fono">--------</p></div>
+                    <div class="bloque-dato"><label>Infraestructura</label><p>Supabase (PostgreSQL)</p></div>
+                    <div class="bloque-dato"><label>Nivel de Amputación</label><p>Amputación Transradial (Antebrazo Medio)</p></div>
+                    <div class="bloque-dato"><label>Modelo de Prótesis</label><p>Hydra Biónica RX-7</p></div>
+                    <div class="bloque-dato"><label>Diagnóstico</label><p style="color: #334155; font-weight: 600;">Dolor Fantasma Reportado: <span class="badge-diagnostico">Alto</span></p></div>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-chart-line" style="color: #5ecce6;"></i> Módulo 4: Evolución y Metas de Movilidad Mecánica
+                </h3>
+                
+                <div style="display: flex; gap: 15px; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <button class="btn-action outline" style="border: 1px solid #cbd5e1; color: #334155; display: flex; gap: 8px; align-items: center;" onclick="abrirModalReceta()">
+                        <i class="fa-solid fa-notes-medical"></i> Agregar Receta
+                    </button>
+                    <button class="btn-action" style="background-color: #8b5cf6; color: white; border: none; display: flex; gap: 8px; align-items: center;" onclick="generarDashboardActual()">
+                        <i class="fa-solid fa-chart-line"></i> Dashboard
+                    </button>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Módulo 5: Telemetría del Dispositivo & Ubicación GPS
+                </h3>
+                <div class="panel-telemetria-preview">
+                    <div class="tarjeta-telemetria">
+                        <i class="fa-solid fa-battery-three-quarters" style="font-size: 30px; color: #10b981;"></i>
+                        <br><br>
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Batería Prótesis Hydra</span>
+                        <h1 style="margin: 10px 0 0 0; font-size: 48px; color: #1e293b;">82%</h1>
+                        <p style="font-size: 12px; color: #10b981; margin-top: 5px;"><i class="fa-solid fa-circle-check"></i> Voltaje Estable (BLE)</p>
+                    </div>
+                    <div class="tarjeta-telemetria" style="padding: 10px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; display: block; text-align: left; padding: 10px;"><i class="fa-solid fa-map-location-dot"></i> Ubicación Actual (GPS en Vivo)</span>
+                        <div style="background: #e2e8f0; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative;">
+                            <i class="fa-solid fa-location-dot" style="font-size: 30px; color: #ef4444; position: absolute; top: 40%;"></i>
+                            <div style="background: white; padding: 5px 15px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 11px; font-weight: 600; position: absolute; top: 60%;">Prótesis PAC-19283746</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-share-nodes" style="color: #2563eb;"></i> Módulo 1: Contactos Familiares para Alertas
+                </h3>
+                <table class="tabla-perfil">
+                    <thead><tr><th>Nombre Familiar</th><th>Vínculo</th><th>Teléfono Alertas</th><th>Canal de Notificación</th><th>Acceso Interfaz</th></tr></thead>
+                    <tbody>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin contactos registrados</td></tr>
                     </tbody>
                 </table>
-            </div>
-        </div> 
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                        <i class="fa-solid fa-file-invoice" style="color: #475569;"></i> Documentación y Exámenes
+                    </h3>
+                </div>
+                <table class="tabla-perfil">
+                    <thead><tr><th>Fecha Carga</th><th>Nombre Documento</th><th style="text-align: center;">Acción</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>09/04/2026</td>
+                            <td style="font-weight: 700;">1.3.5. Formato Funcionalidad Escenarios.xlsx</td>
+                            <td style="text-align: center;"><button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;"><i class="fa-solid fa-download"></i> Descargar</button></td>
+                        </tr>
+                        <tr>
+                            <td>16/04/2026</td>
+                            <td style="font-weight: 700;">BAJADA EN SANTIAGO VUELO COMERCIAL (20-04).xlsx</td>
+                            <td style="text-align: center;"><button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;"><i class="fa-solid fa-download"></i> Descargar</button></td>
+                        </tr>
+                        <tr>
+                            <td>15/04/2026</td>
+                            <td style="font-weight: 700;">Objetivos claves y Kpis.odt</td>
+                            <td style="text-align: center;"><button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;"><i class="fa-solid fa-download"></i> Descargar</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div> </div> 
     </div> 
+
+    <div id="modal-receta" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 480px;">
+            <h2 style="margin-top: 0; color: #2563eb; font-size: 20px;"><i class="fa-solid fa-file-prescription"></i> Emitir Receta Médica</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Medicamento / Compuesto</label>
+                    <input type="text" id="receta-med" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; box-sizing: border-box;" placeholder="Ej: Pregabalina 75mg">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Frecuencia y Dosis</label>
+                    <input type="text" id="receta-dosis" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; box-sizing: border-box;" placeholder="Ej: 1 cada 8 horas">
+                </div>
+                <button type="button" class="btn-action" style="background: #2563eb; color: white; border: none; padding: 8px; margin-top: 5px; width: 100%;" onclick="agregarMedicamentoAReceta()">
+                    <i class="fa-solid fa-plus"></i> Agregar a la receta
+                </button>
+            </div>
+        
+            <div id="contenedor-lista-receta" style="margin-top: 15px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; min-height: 100px; max-height: 180px; overflow-y: auto; background: white;">
+                <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 35px;">No hay medicamentos añadidos aún.</p>
+            </div>
+        
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button class="btn-action outline" onclick="cerrarModalReceta()" style="padding: 10px 20px; border: 1px solid #cbd5e1;">Cancelar</button>
+                <button class="btn-action" style="background-color: #10b981; color: white; border: none; padding: 10px 20px;" onclick="guardarReceta()">Confirmar Emisión</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../js/home.js"></script>
 </body>
 </html>

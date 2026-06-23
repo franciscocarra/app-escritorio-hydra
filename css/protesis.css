@@ -1,0 +1,90 @@
+/* =================================================== */
+/* COMPONENTES DE LA GRILLA DE HARDWARE (SOFT UI)      */
+/* =================================================== */
+.grid-protesis { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 30px; 
+    margin-top: 15px; 
+}
+
+.card-protesis { 
+    background: #ffffff; 
+    border: none; 
+    border-radius: 24px; 
+    padding: 40px 25px; 
+    text-align: center; 
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+    box-shadow: var(--soft-shadow);
+}
+
+.card-protesis:hover { 
+    transform: translateY(-8px); 
+    box-shadow: 0 20px 40px rgba(108, 92, 231, 0.2); 
+}
+
+.img-protesis { 
+    width: 120px; 
+    height: 120px; 
+    background: var(--primary-light); 
+    border-radius: 50%; 
+    margin: 0 auto 25px auto; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 45px; 
+    color: var(--primary); 
+    transition: all 0.4s ease;
+}
+
+.card-protesis:hover .img-protesis {
+    background: var(--primary);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+.tag-protesis { 
+    background: #f0edff; 
+    color: var(--primary); 
+    padding: 6px 16px; 
+    border-radius: 20px; 
+    font-size: 11px; 
+    font-weight: 700; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.card-protesis h3 {
+    color: var(--text-main);
+    margin: 20px 0 10px 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.card-protesis p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 30px;
+    min-height: 60px;
+}
+
+.btn-solicitar {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.2);
+}
+
+.btn-solicitar:hover { 
+    background-color: var(--primary-dark); 
+    transform: translateY(-2px);
+}

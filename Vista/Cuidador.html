@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hydra | Panel del Cuidador</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilo para la burbuja de notificación estilo App */
+        .badge-notificacion {
+            background-color: #ef4444; color: white;
+            border-radius: 50%; padding: 2px 7px;
+            font-size: 11px; font-weight: 700;
+            margin-left: 8px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+        }
+        /* Estilos para los mensajes de la bandeja */
+        .mensaje-card {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 15px; margin-bottom: 15px; border-left: 4px solid #3b82f6;
+        }
+        .mensaje-card.critico { border-left-color: #ef4444; background: #fef2f2; }
+        
+        /* Estilos del Chat */
+        .chat-burbuja { padding: 12px 15px; border-radius: 12px; font-size: 13px; max-width: 70%; line-height: 1.4; margin-bottom: 15px; }
+        .chat-paciente { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 2px; align-self: flex-start; }
+        .chat-cuidador { background: #2563eb; color: white; border-bottom-right-radius: 2px; align-self: flex-end; }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        
+        <div class="sidebar">
+            <div class="logo">HYDRA</div>
+            <span id="caregiver-name-sidebar" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">Cuidador: Cargando...</span>
+            <nav>
+                <p class="active" onclick="volverAlDirectorioCuidador()" style="cursor: pointer;"><i class="fa-solid fa-house-user"></i> Panel de Asistencia</p>
+                <p><i class="fa-solid fa-clock-rotate-left"></i> Historial de Alertas</p>
+            </nav>
+            <div style="margin-top: auto;">
+                <p onclick="window.location.href='Login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p>
+            </div>
+        </div>
+
+        <div class="content">
+            
+            <div id="vista-principal-cuidador">
+                <header class="header-dash" style="margin-bottom: 30px;">
+                    <div>
+                        <h1>Consola de Monitoreo Diario</h1>
+                        <span style="color: var(--text-muted); font-size: 13px;">Seguimiento clínico de pacientes a cargo y enlace de telecomunicaciones.</span>
+                    </div>
+                </header>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-comments" style="color: #2563eb;"></i> Módulo: Bitácora y Mensajería de Pacientes Asignados
+                </h3>
+                <div style="display: block; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div class="table-container" style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
+                        <table class="patient-table" style="width: 100%;">
+                            <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones de Contacto</th></tr></thead>
+                            <tbody id="tabla-pacientes-cuidador">
+                                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-truck-medical" style="color: #ef4444;"></i> Módulo: Central de Enlace Clínico y Alertas
+                </h3>
+                <div style="display: block; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">1. Seleccionar Paciente Afectado</label>
+                                <select id="alerta-paciente" onchange="renderizarCanalAlertas()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px;">
+                                    <option value="Luis Jofré Aguirre">Luis Jofré Aguirre (21.799.988-k)</option>
+                                    <option value="Valentina Morales Castro">Valentina Morales Castro (19.432.105-8)</option>
+                                    <option value="Andrés Sepúlveda Rojas">Andrés Sepúlveda Rojas (15.890.334-2)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">2. Tipo de Requerimiento / Gravedad</label>
+                                <select id="alerta-tipo" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; font-weight: 600;">
+                                    <option value="Información" style="color: #2563eb;">Solicitud de Información General (Baja)</option>
+                                    <option value="Emergencia" style="color: #d97706;">Alerta de Emergencia Médica (Media)</option>
+                                    <option value="Ambulancia" style="color: #ef4444;">⚠️ SOLICITUD CRÍTICA DE AMBULANCIA (Alta)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">3. Síntomas o Glosa del Estado Actual</label>
+                                <textarea id="alerta-descripcion" style="width: 100%; height: 80px; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-family: 'Inter', sans-serif; font-size: 13px; resize: none;" placeholder="Ej: Dolor fantasma agudo intolerable..."></textarea>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+                                <button class="btn-action" style="background-color: #ef4444; color: white; border: none; font-weight: 600; padding: 12px 25px; display: flex; gap: 8px; align-items: center;" onclick="emitirAlertaClinica()">
+                                    <i class="fa-solid fa-tower-broadcast"></i> Transmitir a Central Médica
+                                </button>
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; display: flex; flex-direction: column;">
+                            <span style="font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 12px;"><i class="fa-solid fa-satellite-dish"></i> Estado de despachos y comunicaciones (Filtrado)</span>
+                            <div id="historial-alertas-cuidador" style="flex-grow: 1; min-height: 220px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div> <div id="vista-bandeja-mensajes" style="display: none;">
+                <button class="btn-action outline" style="margin-bottom: 25px; border: none; padding-left: 0;" onclick="volverAlDirectorioCuidador()">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la Consola Principal
+                </button>
+
+                <header class="header-dash" style="margin-bottom: 20px;">
+                    <div>
+                        <h1 id="bandeja-nombre-paciente">Bandeja de Entrada</h1>
+                        <span id="bandeja-rut-paciente" style="color: var(--text-muted); font-size: 14px; font-weight: 500;">RUN: --------</span>
+                    </div>
+                </header>
+
+                <div style="background: #ffffff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; min-height: 400px;">
+                    <div id="contenedor-mensajes">
+                        </div>
+                </div>
+            </div> <div id="vista-chat-paciente" style="display: none;">
+                <button class="btn-action outline" style="margin-bottom: 25px; border: none; padding-left: 0;" onclick="volverAlDirectorioCuidador()">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la Consola Principal
+                </button>
+
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; flex-direction: column; height: 500px; overflow: hidden;">
+                    
+                    <div style="background: #f8fafc; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 45px; height: 45px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <h3 style="margin: 0; color: #0f172a; font-size: 16px;" id="chat-nombre-paciente">Cargando...</h3>
+                                <span style="font-size: 12px; color: #10b981; font-weight: 600;"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> En línea (Prótesis Conectada)</span>
+                            </div>
+                        </div>
+                        
+                        <button class="btn-action" style="background-color: #ef4444; color: white; border: none; padding: 10px 18px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; border-radius: 8px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);" onclick="abrirModalAmbulancia()">
+                            <i class="fa-solid fa-truck-fast"></i> Despachar Ambulancia
+                        </button>
+                    </div>
+
+                    <div style="flex-grow: 1; background: #ffffff; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;">
+                        <p style="text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 20px;">HOY</p>
+                        
+                        <div class="chat-burbuja chat-paciente">
+                            <strong>Paciente:</strong><br>
+                            Hola, tengo una molestia en el ajuste del encaje, siento un pequeño pinchazo al doblar el codo.
+                            <span style="display: block; text-align: right; font-size: 10px; opacity: 0.7; margin-top: 4px;">09:15 AM</span>
+                        </div>
+                        
+                        <div class="chat-burbuja chat-cuidador">
+                            <strong>Tú:</strong><br>
+                            Entendido. No hagas esfuerzos pesados. Voy de camino a tu domicilio para revisar la calibración mecánica.
+                            <span style="display: block; text-align: right; font-size: 10px; opacity: 0.8; margin-top: 4px;">09:18 AM</span>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 15px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;">
+                        <input type="text" placeholder="Escribe un mensaje al paciente..." style="flex-grow: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; font-family: 'Inter', sans-serif;">
+                        <button class="btn-action" style="background: #2563eb; color: white; border: none; width: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="alert('Mensaje enviado al smartphone del paciente.')">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div> </div> 
+    </div>
+
+    <div id="modal-ambulancia" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+            <div style="width: 70px; height: 70px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 style="margin: 0 0 10px 0; color: #0f172a; font-size: 22px;">¿Despachar Ambulancia?</h2>
+            <p style="font-size: 14px; color: #475569; margin-bottom: 25px;">Estás a punto de enviar una alerta <strong>Nivel Rojo</strong> a la central de urgencias para <span id="nombre-modal-amb" style="font-weight: 700;">el paciente</span>. Esto enviará una unidad móvil de inmediato.</p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn-action outline" style="flex: 1; border: 1px solid #cbd5e1; color: #475569; padding: 10px;" onclick="cerrarModalAmbulancia()">Cancelar</button>
+                <button class="btn-action" style="flex: 1; background: #ef4444; color: white; border: none; padding: 10px; font-weight: 600;" onclick="confirmarAmbulancia()">Sí, Despachar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/cuidador.js"></script>
+</body>
+</html>

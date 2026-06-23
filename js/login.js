@@ -83,6 +83,10 @@ async function iniciarSesion() {
                 window.location.href = 'Admin.html'; 
             } else if (usuarioValido.rolIdRol === 2) {
                 window.location.href = 'home.html';
+            } else if (usuarioValido.rolIdRol === 3) {
+                window.location.href = 'Autorizador.html';
+            } else if (usuarioValido.rolIdRol === 4) {
+                window.location.href = 'Cuidador.html';
             } else { 
                 alert("Tu rol no tiene un panel asignado en esta versión."); 
                 btnLogin.innerHTML = textoOriginal; 

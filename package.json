@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
+    "dev": "electron .",
     "start": "electron ."
   },
   "devDependencies": {
-    "electron": "latest"
+    "electron": "^33.0.0"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
   }
 }

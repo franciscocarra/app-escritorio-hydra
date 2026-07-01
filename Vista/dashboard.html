@@ -6,82 +6,125 @@
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        .dash-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .kpi-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 20px; }
-        .kpi-icon { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .kpi-info span { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-        .kpi-info h2 { margin: 5px 0 0 0; font-size: 28px; color: #0f172a; }
-        
-        .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .chart-box { background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .chart-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
+        #app-container { display: flex; min-height: 100vh; }
+
+        .sidebar { width: 240px; background: white; border-right: 1px solid #e2e8f0; padding: 24px; display: flex; flex-direction: column; }
+        .sidebar .logo { font-size: 24px; font-weight: 800; color: #4f46e5; margin-bottom: 4px; }
+        .sidebar nav p { padding: 12px 16px; border-radius: 8px; cursor: pointer; color: #64748b; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .sidebar nav p:hover { background: #f1f5f9; color: #0f172a; }
+        .sidebar nav p.active { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+
+        .content { flex: 1; padding: 32px; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 16px; }
+        .kpi-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .kpi-info span { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .kpi-info h2 { margin: 4px 0 0 0; font-size: 24px; color: #0f172a; }
+        .kpi-info .bpm-value { font-size: 32px; font-weight: 700; color: #dc2626; }
+        .kpi-info .battery-bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 6px; width: 100%; overflow: hidden; }
+        .kpi-info .battery-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+        .charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; margin-bottom: 24px; }
+        .chart-box { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .chart-title { font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        #map { height: 300px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 24px; }
+
+        .info-bar { display: flex; gap: 16px; align-items: center; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .info-bar .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .info-bar .badge.live { background: #dcfce7; color: #16a34a; }
+        .info-bar .badge.historic { background: #eef2ff; color: #4f46e5; }
+
+        .pulse { animation: pulse-anim 1.5s ease-in-out infinite; }
+        @keyframes pulse-anim { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
     </style>
 </head>
 <body>
     <div id="app-container">
         <div class="sidebar">
             <div class="logo">HYDRA</div>
-            <span id="doc-name-sidebar" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">Cargando Médico...</span>
+            <span id="doc-name-sidebar" style="color: #64748b; font-size: 12px; font-weight: 600;">Cargando Médico...</span>
             <nav>
-                <p onclick="window.location.href='home.html'" style="cursor: pointer;"><i class="fa-solid fa-users"></i> Pacientes</p>
+                <p onclick="window.location.href='home.html'"><i class="fa-solid fa-users"></i> Pacientes</p>
                 <p class="active"><i class="fa-solid fa-chart-pie"></i> Análisis Clínico</p>
             </nav>
-            <div style="margin-top: auto;"><p onclick="window.location.href='Login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
+            <div style="margin-top: auto;">
+                <p onclick="window.location.href='Login.html'" style="cursor:pointer; color: #dc2626; font-weight: 600;">
+                    <i class="fa-solid fa-power-off"></i> Cerrar Sesión
+                </p>
+            </div>
         </div>
 
         <div class="content">
-            <button class="btn-action outline" style="margin-bottom: 20px; border: none; padding-left: 0;" onclick="window.location.href='home.html?return=perfil'">
-                <i class="fa-solid fa-arrow-left"></i> Volver al Perfil Clínico
-            </button>
-
-            <header class="header-dash" style="margin-bottom: 30px;">
+            <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+                <button onclick="window.location.href='home.html?return=perfil'" style="background:none; border:none; cursor:pointer; color:#4f46e5; font-size:14px;">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </button>
                 <div>
-                    <h1 id="titulo-paciente">Análisis Telemétrico</h1>
-                    <span id="subtitulo-rut" style="color: #64748b; font-size: 14px; font-weight: 500;">RUN: --------</span>
+                    <h1 id="titulo-paciente" style="font-size:22px;">Análisis Telemétrico</h1>
+                    <span id="subtitulo-rut" style="color:#64748b; font-size:13px;">RUN: --------</span>
                 </div>
-            </header>
+            </div>
 
-            <div class="dash-kpi-grid">
+            <div class="kpi-grid">
                 <div class="kpi-card">
-                    <div class="kpi-icon" style="background: #e0e7ff; color: #4f46e5;"><i class="fa-solid fa-stopwatch"></i></div>
+                    <div class="kpi-icon" style="background:#fee2e2; color:#dc2626;"><i class="fa-solid fa-heart pulse"></i></div>
                     <div class="kpi-info">
-                        <span>Promedio Uso Diario</span>
-                        <h2 id="kpi-uso">0 hrs</h2>
+                        <span>BPM Actual</span>
+                        <h2 class="bpm-value" id="kpi-bpm">--</h2>
                     </div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-icon" style="background: #dcfce7; color: #16a34a;"><i class="fa-solid fa-battery-half"></i></div>
+                    <div class="kpi-icon" style="background:#dcfce7; color:#16a34a;"><i class="fa-solid fa-battery-half"></i></div>
                     <div class="kpi-info">
-                        <span>Eficiencia Batería</span>
-                        <h2 id="kpi-bateria">0%</h2>
+                        <span>Batería</span>
+                        <h2 id="kpi-bateria">--%</h2>
+                        <div class="battery-bar"><div class="battery-fill" id="battery-fill" style="width:0%; background:#16a34a;"></div></div>
                     </div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-icon" style="background: #fee2e2; color: #dc2626;"><i class="fa-solid fa-temperature-arrow-up"></i></div>
+                    <div class="kpi-icon" style="background:#e0e7ff; color:#4f46e5;"><i class="fa-solid fa-clock"></i></div>
                     <div class="kpi-info">
-                        <span>Temp. Máxima Motor</span>
-                        <h2 id="kpi-temp">0°C</h2>
+                        <span>Promedio 14 días</span>
+                        <h2 id="kpi-promedio">--</h2>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background:#fef3c7; color:#d97706;"><i class="fa-solid fa-location-dot"></i></div>
+                    <div class="kpi-info">
+                        <span>Última Ubicación</span>
+                        <h2 id="kpi-ubicacion" style="font-size:14px;">Cargando...</h2>
                     </div>
                 </div>
             </div>
 
-            <div class="charts-grid">
+            <div class="charts-row">
                 <div class="chart-box">
-                    <div class="chart-title"><i class="fa-solid fa-chart-column" style="color: #4f46e5;"></i> Evolución de Horas de Uso (Últimos 14 días)</div>
-                    <canvas id="graficoUso"></canvas>
+                    <div class="chart-title"><i class="fa-solid fa-chart-line" style="color:#4f46e5;"></i> Histórico BPM (14 días)</div>
+                    <canvas id="chart-historico" height="220"></canvas>
                 </div>
                 <div class="chart-box">
-                    <div class="chart-title"><i class="fa-solid fa-chart-line" style="color: #dc2626;"></i> Calor Disipado (°C)</div>
-                    <canvas id="graficoTemp"></canvas>
+                    <div class="chart-title"><i class="fa-solid fa-heart-pulse" style="color:#dc2626;"></i> BPM en Vivo (30s)</div>
+                    <canvas id="chart-vivo" height="220"></canvas>
                 </div>
             </div>
 
-        </div> 
-    </div> 
+            <div id="map"></div>
+
+            <div class="info-bar">
+                <span class="badge live"><i class="fa-solid fa-circle" style="font-size:8px;"></i> En vivo</span>
+                <span id="ultima-actualizacion">Última actualización: --</span>
+                <span id="total-lecturas">Lecturas hoy: 0</span>
+            </div>
+        </div>
+    </div>
 
     <script src="../js/dashboard.js"></script>
 </body>

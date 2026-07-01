@@ -1,5 +1,8 @@
 // Contraseña de Spring Boot para autenticación básica
-const credencialesGlobales = btoa(`user:dc20f0e4-b1bc-4969-a01c-cbb8282c805f`);
+function getAuthHeaders() {
+    const token = localStorage.getItem('hydra_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 // ==========================================
 // VALIDACIÓN MATEMÁTICA DE RUT CHILENO (MÓDULO 11)
@@ -33,7 +36,7 @@ function validarCorreo(correo) {
 // ==========================================
 async function enc(textoLimpio) {
     try {
-        const url = `http://localhost:8081/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
+        const url = `https://hydra-arm-security.onrender.com/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
         const res = await fetch(url, { method: 'GET' }); 
         if (!res.ok) throw new Error("Motor apagado");
         return await res.text(); 
@@ -104,10 +107,10 @@ async function crearAdminDirecto() {
 
         try {
             // 3. Inyección directa vía HTTP POST a la API REST de Empleados (8080)
-            const res = await fetch('http://localhost:8080/api/empleados', {
+            const res = await fetch('https://hydra-arm-crud.onrender.com/api/empleados', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Basic ${credencialesGlobales}`,
+                    'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(adminData)

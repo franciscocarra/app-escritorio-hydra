@@ -26,10 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. CARGA DE DATOS PRINCIPALES
 // ==========================================
 function cargarDatosMedico() {
-    const usuarioString = localStorage.getItem('hydraUser');
+    const usuarioString = localStorage.getItem('hydra_user');
     if(usuarioString) {
         const usuario = JSON.parse(usuarioString);
-        document.getElementById('doc-name-sidebar').innerText = `Dr. ${usuario.nombre} ${usuario.apellidoPaterno}`;
+        document.getElementById('doc-name-sidebar').innerText = `Dr. ${usuario.email}`;
     } else {
         window.location.href = 'Login.html';
     }
@@ -38,25 +38,22 @@ function cargarDatosMedico() {
 async function desencriptarDato(hash) {
     if (!hash || hash === 'null' || hash.length < 15) return hash || 'Sin registro';
     try {
-        const url = `http://localhost:8081/api/user/cripto/decrypt?codigo=${encodeURIComponent(hash)}`;
-        const res = await fetch(url);
-        return res.ok ? await res.text() : "Error descifrado";
+        return await window.hydraAPI.decrypt(hash);
     } catch (e) { return "Error API"; }
 }
 
 async function cargarPacientes() {
-    const urlAPI = 'http://localhost:8080/api/pacientes';
-    const credenciales = btoa(`user:dc20f0e4-b1bc-4969-a01c-cbb8282c805f`); 
+    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/pacientes';
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-pacientes');
-        const res = await fetch(urlAPI, { headers: { 'Authorization': `Basic ${credenciales}` }});
+        const res = await fetch(urlAPI, { headers: { 'Authorization': `Bearer ${localStorage.getItem('hydra_token')}` }});
         
         if (res.ok) {
             const cifrados = await res.json(); 
             const promesas = cifrados.map(async (p) => {
                 const [rut, tel] = await Promise.all([desencriptarDato(p.runP), desencriptarDato(p.telefono)]);
-                return { ...p, runP: rut, telefono: tel };
+                return { ...p, runP: rut, telefono: tel, runPEncriptado: p.runP };
             });
             const legibles = await Promise.all(promesas);
 
@@ -68,10 +65,10 @@ async function cargarPacientes() {
                 const fila = `<tr>
                     <td>${p.runP}</td><td>${p.nombre}</td><td>${apP} ${apM}</td><td>${p.telefono}</td>
                     <td style="display: flex; gap: 8px;">
-                        <button class="btn-action outline" style="display: flex; align-items: center; gap: 5px;" onclick="abrirPerfil('${p.nombre}', '${apP}', '${apM}', '${p.runP}', '${p.telefono}')">
+                        <button class="btn-action outline" style="display: flex; align-items: center; gap: 5px;" onclick="abrirPerfil('${p.nombre}', '${apP}', '${apM}', '${p.runP}', '${p.telefono}', '${p.runPEncriptado}')">
                             <i class="fa-solid fa-user-doctor"></i> Perfil Clínico
                         </button>
-                        <button class="btn-action" style="background-color: #8b5cf6; color: white; border: none; display: flex; align-items: center; gap: 5px;" onclick="irAlDashboard('${nombreCompleto}', '${p.runP}')">
+                        <button class="btn-action" style="background-color: #8b5cf6; color: white; border: none; display: flex; align-items: center; gap: 5px;" onclick="irAlDashboard('${nombreCompleto}', '${p.runPEncriptado}', '${p.runP}')">
                             <i class="fa-solid fa-chart-line"></i> Dashboard
                         </button>
                     </td>
@@ -85,11 +82,11 @@ async function cargarPacientes() {
 // ==========================================
 // 2. INTERCAMBIO DE VISTAS (TABLA <-> PERFIL)
 // ==========================================
-function abrirPerfil(nombre, apP, apM, rut, fono) {
+function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
     // Memoria del paciente actual
     const pacObj = { nombre, apP, apM, rut, fono };
     localStorage.setItem('pacienteActivo', JSON.stringify(pacObj));
-    pacienteActualData = { nombreCompleto: `${nombre} ${apP}`, rut: rut };
+    pacienteActualData = { nombreCompleto: `${nombre} ${apP}`, rut: rut, rutEnc: rutEnc || rut };
 
     // Inyectamos iniciales y datos en cabecera
     const iniciales = `${nombre.charAt(0).toUpperCase()}${apP.charAt(0).toUpperCase()}`;
@@ -122,7 +119,7 @@ function volverAlDirectorio() {
 // ==========================================
 // 3. GENERADOR DE DATOS DE DASHBOARD
 // ==========================================
-function irAlDashboard(nombrePaciente, rutPaciente) {
+function irAlDashboard(nombrePaciente, rutPaciente, rutDisplay) {
     const datos14Dias = [];
     const hoy = new Date();
 
@@ -137,7 +134,7 @@ function irAlDashboard(nombrePaciente, rutPaciente) {
         });
     }
 
-    const dataDashboard = { paciente: nombrePaciente, rut: rutPaciente, telemetria: datos14Dias };
+    const dataDashboard = { paciente: nombrePaciente, runP: rutPaciente, rutDisplay: rutDisplay || rutPaciente, telemetria: datos14Dias };
     localStorage.setItem('dashboardTemporal', JSON.stringify(dataDashboard));
     
     window.location.href = 'dashboard.html';
@@ -145,7 +142,7 @@ function irAlDashboard(nombrePaciente, rutPaciente) {
 
 function generarDashboardActual() {
     if(pacienteActualData) {
-        irAlDashboard(pacienteActualData.nombreCompleto, pacienteActualData.rut);
+        irAlDashboard(pacienteActualData.nombreCompleto, pacienteActualData.rutEnc, pacienteActualData.rut);
     }
 }
 

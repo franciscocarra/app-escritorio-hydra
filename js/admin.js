@@ -5,7 +5,10 @@ let listaEmpleadosOriginal = [];
 let listaPacientesOriginal = []; 
 
 // ⚠️ ACTUALIZA LA CONTRASEÑA DE SPRING BOOT HOY AQUÍ ⚠️
-const credencialesGlobales = btoa(`user:dc20f0e4-b1bc-4969-a01c-cbb8282c805f`); 
+function getAuthHeaders() {
+    const token = localStorage.getItem('hydra_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarPacientesAdmin();
@@ -17,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function desencriptarDato(hash) {
     if (!hash || hash === 'null' || hash.length < 15) return hash || 'Sin registro';
     try {
-        const url = `http://localhost:8081/api/user/cripto/decrypt?codigo=${encodeURIComponent(hash)}`;
+        const url = `https://hydra-arm-security.onrender.com/api/user/cripto/decrypt?codigo=${encodeURIComponent(hash)}`;
         const res = await fetch(url);
         return res.ok ? await res.text() : "Error descifrado";
     } catch (e) { return "Error API"; }
@@ -26,7 +29,7 @@ async function desencriptarDato(hash) {
 async function encriptarDato(textoLimpio) {
     if (!textoLimpio) return null;
     try {
-        const url = `http://localhost:8081/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
+        const url = `https://hydra-arm-security.onrender.com/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
         const res = await fetch(url, { method: 'GET' }); 
         
         if (!res.ok) {
@@ -93,13 +96,13 @@ function cerrarModalAgregar(tipo) {
 // MÓDULO: PACIENTES 
 // ==========================================
 async function cargarPacientesAdmin() {
-    const urlAPI = 'http://localhost:8080/api/pacientes';
+    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/pacientes';
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-pacientes');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--primary);">Consultando BD y Desencriptando datos <i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-        const res = await fetch(urlAPI, { headers: { 'Authorization': `Basic ${credencialesGlobales}` }});
+        const res = await fetch(urlAPI, { headers: { 'Authorization': `Bearer ${localStorage.getItem('hydra_token')}` }});
         if (res.ok) {
             const cifrados = await res.json(); 
             const promesas = cifrados.map(async (p) => {
@@ -183,10 +186,10 @@ async function guardarNuevoPaciente() {
             telefono: telEncriptado
         };
 
-        const res = await fetch('http://localhost:8080/api/pacientes', {
+        const res = await fetch('https://hydra-arm-crud.onrender.com/api/pacientes', {
             method: 'POST',
             headers: {
-                'Authorization': `Basic ${credencialesGlobales}`,
+                'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(pacienteData)
@@ -210,13 +213,13 @@ async function guardarNuevoPaciente() {
 // MÓDULO: EMPLEADOS 
 // ==========================================
 async function cargarEmpleadosAdmin() {
-    const urlAPI = 'http://localhost:8080/api/empleados'; 
+    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/empleados'; 
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-empleados');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--primary);">Buscando Empleados... <i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
 
-        const res = await fetch(urlAPI, { headers: { 'Authorization': `Basic ${credencialesGlobales}` }});
+        const res = await fetch(urlAPI, { headers: { 'Authorization': `Bearer ${localStorage.getItem('hydra_token')}` }});
         if (res.ok) {
             const cifrados = await res.json(); 
             
@@ -325,10 +328,10 @@ async function guardarNuevoEmpleado() {
             sucursalIdSucursal: parseInt(sucursalInput)
         };
 
-        const res = await fetch('http://localhost:8080/api/empleados', {
+        const res = await fetch('https://hydra-arm-crud.onrender.com/api/empleados', {
             method: 'POST',
             headers: {
-                'Authorization': `Basic ${credencialesGlobales}`,
+                'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(empleadoData)

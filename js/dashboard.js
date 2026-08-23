@@ -1,4 +1,4 @@
-const API_URL = 'https://api.hydra.cl/api';
+const API_URL = 'https://hydra-crud.onrender.com/api';
 let chartHistorico = null;
 let chartVivo = null;
 let map = null;

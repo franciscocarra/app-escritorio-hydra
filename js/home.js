@@ -43,7 +43,7 @@ async function desencriptarDato(hash) {
 }
 
 async function cargarPacientes() {
-    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/pacientes';
+    const urlAPI = 'https://hydra-crud.onrender.com/api/pacientes';
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-pacientes');

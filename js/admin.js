@@ -96,7 +96,7 @@ function cerrarModalAgregar(tipo) {
 // MÓDULO: PACIENTES 
 // ==========================================
 async function cargarPacientesAdmin() {
-    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/pacientes';
+    const urlAPI = 'https://hydra-crud.onrender.com/api/pacientes';
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-pacientes');
@@ -186,7 +186,7 @@ async function guardarNuevoPaciente() {
             telefono: telEncriptado
         };
 
-        const res = await fetch('https://hydra-arm-crud.onrender.com/api/pacientes', {
+        const res = await fetch('https://hydra-crud.onrender.com/api/pacientes', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,
@@ -213,7 +213,7 @@ async function guardarNuevoPaciente() {
 // MÓDULO: EMPLEADOS 
 // ==========================================
 async function cargarEmpleadosAdmin() {
-    const urlAPI = 'https://hydra-arm-crud.onrender.com/api/empleados'; 
+    const urlAPI = 'https://hydra-crud.onrender.com/api/empleados'; 
     
     try {
         const tbody = document.getElementById('cuerpo-tabla-empleados');
@@ -328,7 +328,7 @@ async function guardarNuevoEmpleado() {
             sucursalIdSucursal: parseInt(sucursalInput)
         };
 
-        const res = await fetch('https://hydra-arm-crud.onrender.com/api/empleados', {
+        const res = await fetch('https://hydra-crud.onrender.com/api/empleados', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,

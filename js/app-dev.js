@@ -107,7 +107,7 @@ async function crearAdminDirecto() {
 
         try {
             // 3. Inyección directa vía HTTP POST a la API REST de Empleados (8080)
-            const res = await fetch('https://hydra-arm-crud.onrender.com/api/empleados', {
+            const res = await fetch('https://hydra-crud.onrender.com/api/empleados', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('hydra_token')}`,

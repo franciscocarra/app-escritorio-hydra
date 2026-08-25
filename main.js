@@ -23,7 +23,7 @@ function createWindow() {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           "default-src 'self'; " +
-          "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; " +
+          "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com 'unsafe-inline'; " +
           "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; " +
           "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
           "img-src 'self' data: https://*.supabase.co; " +

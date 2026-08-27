@@ -2,7 +2,8 @@
 // VARIABLES GLOBALES
 // ==========================================
 let pacienteActualData = null;
-let listaRecetaActual = []; // Aquí se guardan los medicamentos temporalmente
+let listaRecetaActual = [];
+let archivoExamenSeleccionado = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosMedico();
@@ -26,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. CARGA DE DATOS PRINCIPALES
 // ==========================================
 function cargarDatosMedico() {
-    const usuarioString = localStorage.getItem('hydra_user');
+    const usuarioString = localStorage.getItem('hydraUser');
     if(usuarioString) {
         const usuario = JSON.parse(usuarioString);
         document.getElementById('doc-name-sidebar').innerText = `Dr. ${usuario.email}`;
@@ -80,6 +81,44 @@ async function cargarPacientes() {
 }
 
 // ==========================================
+// CARGA DE DOCUMENTOS DESDE EL BUCKET
+// ==========================================
+async function cargarDocumentos(rutEnc) {
+    const tbody = document.getElementById('cuerpo-tabla-documentos');
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cargando documentos...</td></tr>';
+
+    try {
+        const documentos = await window.hydraAPI.getDocumentos(rutEnc);
+
+        if (!Array.isArray(documentos) || documentos.error || documentos.length === 0) {
+            const msg = (documentos && documentos.error) ? JSON.stringify(documentos.error) : 'No hay documentos en el bucket';
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">${msg}</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        documentos.forEach(doc => {
+            const fecha = new Date(doc.fechaCreacion);
+            const fechaStr = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const fila = `<tr>
+                <td>${fechaStr}</td>
+                <td style="font-weight: 700;">${doc.nombre}</td>
+                <td style="text-align: center;">
+                    <button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;" onclick="window.open('${doc.url}', '_blank')">
+                        <i class="fa-solid fa-download"></i> Descargar
+                    </button>
+                </td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', fila);
+        });
+    } catch (e) {
+        console.error('Error al cargar documentos:', e);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--danger);">Error al cargar documentos</td></tr>';
+    }
+}
+
+// ==========================================
 // 2. INTERCAMBIO DE VISTAS (TABLA <-> PERFIL)
 // ==========================================
 function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
@@ -98,6 +137,9 @@ function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
 
     // NUEVO: Verificamos si este paciente ya tiene datos financieros guardados
     actualizarVistaFinanzasModulo(rut);
+
+    // Cargamos documentos del bucket (con RUT limpio)
+    cargarDocumentos(rut);
 
     // Cambiamos de vista
     document.getElementById('vista-directorio').style.display = 'none';
@@ -326,4 +368,152 @@ function editarFinanzasModulo() {
     document.getElementById('finanzas-form-bloque').style.display = 'flex';
     document.getElementById('finanzas-status-bloque').style.display = 'none';
 }
-    
+
+// ==========================================
+// SUBIDA DE EXÁMENES MÉDICOS
+// ==========================================
+function abrirModalSubida() {
+    if (!pacienteActualData) {
+        alert('Selecciona un paciente primero.');
+        return;
+    }
+    document.getElementById('modal-subida-nombre-paciente').innerText = pacienteActualData.nombreCompleto;
+    document.getElementById('modal-subida-examen').style.display = 'flex';
+    limpiarArchivoExamen();
+}
+
+function cerrarModalSubida() {
+    document.getElementById('modal-subida-examen').style.display = 'none';
+    document.getElementById('input-nombre-examen').value = '';
+    limpiarArchivoExamen();
+}
+
+function onFileSelectedExam(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    archivoExamenSeleccionado = file;
+
+    const inputNombre = document.getElementById('input-nombre-examen');
+    if (!inputNombre.value) {
+        inputNombre.value = file.name.split('.').slice(0, -1).join('.');
+    }
+
+    document.getElementById('drop-content-vacio').style.display = 'none';
+    document.getElementById('drop-content-archivo').style.display = 'block';
+    document.getElementById('drop-icon-examen').className = 'fa-solid fa-check-circle';
+    document.getElementById('drop-icon-examen').style.color = '#00b894';
+    document.getElementById('exam-file-name').textContent = file.name;
+    document.getElementById('exam-file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    document.getElementById('drop-zone-examen').style.borderStyle = 'solid';
+    document.getElementById('drop-zone-examen').style.borderColor = '#00b894';
+    document.getElementById('drop-zone-examen').style.background = '#f0fdf4';
+
+    if (file.type.includes('image')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            document.getElementById('preview-img-examen').src = reader.result;
+            document.getElementById('preview-container-examen').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('preview-container-examen').style.display = 'none';
+    }
+
+    document.getElementById('btn-subir-examen').style.display = 'flex';
+}
+
+function limpiarArchivoExamen() {
+    archivoExamenSeleccionado = null;
+    document.getElementById('input-file-examen').value = '';
+    document.getElementById('drop-content-vacio').style.display = 'block';
+    document.getElementById('drop-content-archivo').style.display = 'none';
+    document.getElementById('drop-icon-examen').className = 'fa-solid fa-cloud-arrow-up';
+    document.getElementById('drop-icon-examen').style.color = '#444';
+    document.getElementById('drop-zone-examen').style.borderStyle = 'dashed';
+    document.getElementById('drop-zone-examen').style.borderColor = '#b1b1b1';
+    document.getElementById('drop-zone-examen').style.background = '#f9f9f9';
+    document.getElementById('preview-container-examen').style.display = 'none';
+    document.getElementById('btn-subir-examen').style.display = 'none';
+}
+
+async function subirArchivoExamen() {
+    if (!archivoExamenSeleccionado || !pacienteActualData) {
+        alert('Debes seleccionar un archivo.');
+        return;
+    }
+
+    const nombreExamen = document.getElementById('input-nombre-examen').value.trim();
+    if (!nombreExamen) {
+        alert('Debes asignar un nombre al examen.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-subir-examen');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo...';
+
+    try {
+        await window.hydraAPI.uploadDocumento(pacienteActualData.rut, archivoExamenSeleccionado);
+
+        const fechaHoy = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const tablaDocs = document.getElementById('cuerpo-tabla-documentos');
+
+        if (tablaDocs.querySelector('td[colspan]')) {
+            tablaDocs.innerHTML = '';
+        }
+
+        tablaDocs.insertAdjacentHTML('afterbegin', `
+            <tr style="background-color: #f0fdf4;">
+                <td>${fechaHoy}</td>
+                <td style="font-weight: 700;"><i class="fa-solid fa-file-medical"></i> ${archivoExamenSeleccionado.name}</td>
+                <td style="text-align: center;">
+                    <span style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Subido
+                    </span>
+                </td>
+            </tr>
+        `);
+
+        alert(`¡Examen "${nombreExamen}" subido correctamente!`);
+        cerrarModalSubida();
+    } catch (error) {
+        console.error('Error en subida:', error);
+        alert('Error al subir: ' + (error.message || 'Error desconocido'));
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-send"></i> Iniciar Subida';
+    }
+}
+
+function setupDragDropExam() {
+    const dropZone = document.getElementById('drop-zone-examen');
+    if (!dropZone) return;
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#2563eb';
+        dropZone.style.background = '#f0edff';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        if (!archivoExamenSeleccionado) {
+            dropZone.style.borderColor = '#b1b1b1';
+            dropZone.style.background = '#f9f9f9';
+        }
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            document.getElementById('input-file-examen').files = files;
+            onFileSelectedExam({ target: { files: files } });
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupDragDropExam();
+});

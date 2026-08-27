@@ -23,11 +23,11 @@ function createWindow() {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           "default-src 'self'; " +
-          "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; " +
+          "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
           "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; " +
           "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
           "img-src 'self' data: https://*.supabase.co; " +
-          "connect-src 'self' https://api.hydra.cl; " +
+          "connect-src 'self' https://hydra-crud.onrender.com https://hydra-arm-security.onrender.com; " +
           "frame-ancestors 'none'"
         ]
       }

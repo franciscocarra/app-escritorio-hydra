@@ -1,5 +1,18 @@
 const { contextBridge } = require('electron');
 
+const CRUD_URL = 'https://hydra-crud.onrender.com';
+const SECURITY_URL = 'https://hydra-arm-security.onrender.com';
+
+function getBaseUrl(endpoint) {
+  if (endpoint.startsWith('/api/auth') ||
+      endpoint.startsWith('/api/user/cripto') ||
+      /\/api\/pacientes\/[^/]+\/documentos/.test(endpoint) ||
+      /\/api\/pacientes\/[^/]+\/perfil/.test(endpoint)) {
+    return SECURITY_URL;
+  }
+  return CRUD_URL;
+}
+
 // ── Safe API exposed to renderer ──
 contextBridge.exposeInMainWorld('hydraAPI', {
   // Platform info (no PII)
@@ -8,7 +21,7 @@ contextBridge.exposeInMainWorld('hydraAPI', {
 
   // ── HTTP API calls ──
   async apiCall(endpoint, options = {}) {
-    const baseUrl = 'https://api.hydra.cl';
+    const baseUrl = getBaseUrl(endpoint);
     const url = `${baseUrl}${endpoint}`;
 
     const token = localStorage.getItem('hydra_token');
@@ -24,10 +37,9 @@ contextBridge.exposeInMainWorld('hydraAPI', {
     });
 
     if (res.status === 401) {
-      // Try refresh
       const refreshToken = localStorage.getItem('hydra_refresh');
       if (refreshToken) {
-        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+        const refreshRes = await fetch(`${SECURITY_URL}/api/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken })
@@ -38,7 +50,6 @@ contextBridge.exposeInMainWorld('hydraAPI', {
           localStorage.setItem('hydra_token', data.accessToken);
           localStorage.setItem('hydra_refresh', data.refreshToken);
 
-          // Retry original request
           const retryRes = await fetch(url, {
             ...options,
             headers: {
@@ -65,7 +76,7 @@ contextBridge.exposeInMainWorld('hydraAPI', {
 
   // ── Login (JWT) ──
   async login(email, password, rol, runP) {
-    const res = await fetch('https://api.hydra.cl/api/auth/login', {
+    const res = await fetch(`${SECURITY_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, rol, runP })
@@ -79,7 +90,7 @@ contextBridge.exposeInMainWorld('hydraAPI', {
     const data = await res.json();
     localStorage.setItem('hydra_token', data.accessToken);
     localStorage.setItem('hydra_refresh', data.refreshToken);
-    localStorage.setItem('hydra_user', JSON.stringify({ email, role: data.role }));
+    localStorage.setItem('hydraUser', JSON.stringify({ email, role: data.role }));
     return data;
   },
 
@@ -87,17 +98,23 @@ contextBridge.exposeInMainWorld('hydraAPI', {
   logout() {
     localStorage.removeItem('hydra_token');
     localStorage.removeItem('hydra_refresh');
-    localStorage.removeItem('hydra_user');
+    localStorage.removeItem('hydraUser');
     window.location.href = 'login.html';
   },
 
   // ── Crypto calls ──
   async encrypt(texto) {
-    return this.apiCall(`/api/user/cripto/encrypt?texto=${encodeURIComponent(texto)}`);
+    const url = `${SECURITY_URL}/api/user/cripto/encrypt?texto=${encodeURIComponent(texto)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Encrypt failed');
+    return res.text();
   },
 
   async decrypt(codigo) {
-    return this.apiCall(`/api/user/cripto/decrypt?codigo=${encodeURIComponent(codigo)}`);
+    const url = `${SECURITY_URL}/api/user/cripto/decrypt?codigo=${encodeURIComponent(codigo)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Decrypt failed');
+    return res.text();
   },
 
   // ── Pacientes ──
@@ -151,13 +168,21 @@ contextBridge.exposeInMainWorld('hydraAPI', {
     return this.apiCall(`/api/pacientes/${runP}/documentos`);
   },
 
-  async uploadDocumento(runP, formData) {
+  async uploadDocumento(runP, archivo) {
     const token = localStorage.getItem('hydra_token');
-    const res = await fetch(`https://api.hydra.cl/api/pacientes/${runP}/documentos`, {
+
+    const formData = new FormData();
+    formData.append('archivo', archivo, archivo.name);
+
+    const res = await fetch(`${SECURITY_URL}/api/pacientes/${runP}/documentos`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: formData
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Error al subir documento');
+    }
     return res.json();
   },
 

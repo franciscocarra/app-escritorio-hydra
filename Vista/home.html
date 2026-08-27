@@ -185,11 +185,16 @@
                     <span style="font-size: 12px; color: #64748b;">Inicia el requerimiento de hardware robótico para este paciente.</span>
                 </div>
 
-
+                
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
                         <i class="fa-solid fa-file-invoice" style="color: #475569;"></i> Documentación y Exámenes
                     </h3>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn-action" style="background-color: #2563eb; color: white; border: none; display: flex; gap: 8px; align-items: center;" onclick="abrirModalSubida()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Subir Examen
+                    </button>
                 </div>
                 <table class="tabla-perfil">
                     <thead>
@@ -199,38 +204,53 @@
                             <th style="text-align: center;">Acción</th>
                         </tr>
                     </thead>
-                    <tbody id="cuerpo-tabla-documentos"> <tr>
-                            <td>09/04/2026</td>
-                            <td style="font-weight: 700;">1.3.5. Formato Funcionalidad Escenarios.xlsx</td>
-                            <td style="text-align: center;">
-                                <button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;">
-                                    <i class="fa-solid fa-download"></i> Descargar
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>16/04/2026</td>
-                            <td style="font-weight: 700;">BAJADA EN SANTIAGO VUELO COMERCIAL (20-04).xlsx</td>
-                            <td style="text-align: center;">
-                                <button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;">
-                                    <i class="fa-solid fa-download"></i> Descargar
-                                </button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>15/04/2026</td>
-                            <td style="font-weight: 700;">Objetivos claves y Kpis.odt</td>
-                            <td style="text-align: center;">
-                                <button class="btn-action outline" style="color: #2563eb; border-color: #2563eb; padding: 5px 15px; font-size: 12px;">
-                                    <i class="fa-solid fa-download"></i> Descargar
-                                </button>
-                            </td>
-                        </tr>
+                    <tbody id="cuerpo-tabla-documentos">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Selecciona un paciente para ver sus documentos</td></tr>
                     </tbody>
                 </table>
 
+
             </div> </div> 
     </div> 
+
+    <div id="modal-subida-examen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 40px; border-radius: 24px; width: 520px; max-width: 90%; box-shadow: 0 25px 50px rgba(0,0,0,0.1); transform: translateY(-20px); animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+            <h2 style="margin-top: 0; color: #2563eb; font-size: 20px; text-align: center;"><i class="fa-solid fa-cloud-arrow-up"></i> Cargar Documento</h2>
+            <p id="modal-subida-nombre-paciente" style="font-weight: 700; color: #0f172a; text-align: center; font-size: 16px; margin-bottom: 20px;">Paciente</p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Nombre del examen</label>
+                <input type="text" id="input-nombre-examen" placeholder="Ej: Resonancia Magnética" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px;">
+            </div>
+
+            <div id="drop-zone-examen" style="border: 2px dashed #b1b1b1; border-radius: 12px; background: #f9f9f9; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" onclick="document.getElementById('input-file-examen').click()">
+                <i id="drop-icon-examen" class="fa-solid fa-cloud-arrow-up" style="font-size: 50px; color: #444; margin-bottom: 10px;"></i>
+                <div id="drop-content-vacio">
+                    <p style="font-size: 1.1rem; font-weight: 500; margin: 0;">Arrastrar archivos aquí</p>
+                    <p style="font-size: 0.8rem; color: #777; margin: 5px 0;">Sin límite de tamaño</p>
+                    <p style="font-weight: bold; margin: 10px 0; color: #999;">o</p>
+                    <button type="button" class="btn-action outline" style="font-size: 12px; padding: 6px 16px;">Seleccionar archivo</button>
+                </div>
+                <div id="drop-content-archivo" style="display: none;">
+                    <p style="font-weight: bold; color: #0f172a; margin-bottom: 0;"><strong>Archivo:</strong> <span id="exam-file-name"></span></p>
+                    <p style="font-size: 0.85rem; color: #666;">Tamaño: <span id="exam-file-size"></span></p>
+                    <button type="button" class="btn-action outline" style="color: #ff7675; border-color: #ff7675; font-size: 12px; padding: 5px 14px; margin-top: 5px;" onclick="event.stopPropagation(); limpiarArchivoExamen();">Cambiar archivo</button>
+                </div>
+                <input type="file" id="input-file-examen" style="display: none;" onchange="onFileSelectedExam(event)">
+            </div>
+
+            <div id="preview-container-examen" style="text-align: center; display: none;">
+                <img id="preview-img-examen" style="max-height: 150px; border-radius: 8px; margin-top: 15px;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button class="btn-action outline" style="padding: 10px 20px; border: 1px solid #cbd5e1;" onclick="cerrarModalSubida()">Cancelar</button>
+                <button id="btn-subir-examen" class="btn-action" style="background-color: #00b894; color: white; border: none; padding: 10px 20px; display: none;" onclick="subirArchivoExamen()">
+                    <i class="fa-solid fa-send"></i> Iniciar Subida
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-receta" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
         <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 480px;">

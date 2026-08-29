@@ -88,11 +88,21 @@ async function cargarDocumentos(rutEnc) {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cargando documentos...</td></tr>';
 
     try {
-        const documentos = await window.hydraAPI.getDocumentos(rutEnc);
+        const resp = await window.hydraAPI.getDocumentos(rutEnc);
 
-        if (!Array.isArray(documentos) || documentos.error || documentos.length === 0) {
-            const msg = (documentos && documentos.error) ? JSON.stringify(documentos.error) : 'No hay documentos en el bucket';
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">${msg}</td></tr>`;
+        // Misma normalización que la app móvil (perfil.page.ts):
+        // el backend devuelve {documentos:[...]} o [{documentos:[...]}]
+        let documentos = [];
+        if (Array.isArray(resp) && resp.length > 0 && resp[0] && resp[0].documentos) {
+            documentos = resp[0].documentos;
+        } else if (resp && resp.documentos) {
+            documentos = resp.documentos;
+        } else if (Array.isArray(resp)) {
+            documentos = resp;
+        }
+
+        if (!Array.isArray(documentos) || documentos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">El paciente no tiene documentos disponibles</td></tr>';
             return;
         }
 
@@ -141,6 +151,9 @@ function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
     // Cargamos documentos del bucket (con RUT limpio)
     cargarDocumentos(rut);
 
+    // Cargamos los contactos familiares vinculados a este paciente
+    cargarContactosFamiliares(rutEnc || rut);
+
     // Cambiamos de vista
     document.getElementById('vista-directorio').style.display = 'none';
     document.getElementById('vista-perfil').style.display = 'block';
@@ -153,9 +166,20 @@ function volverAlDirectorio() {
 
     document.getElementById('vista-perfil').style.display = 'none';
     document.getElementById('vista-directorio').style.display = 'block';
+    document.getElementById('vista-directorio-familiares').style.display = 'none';
+
+    marcaNavActiva('volverAlDirectorio');
 
     // Limpiamos la URL para que no se quede pegado el "?return=perfil"
     window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function marcaNavActiva(fn) {
+    const navItems = document.querySelectorAll('.sidebar nav p');
+    navItems.forEach(p => {
+        const esActivo = p.getAttribute('onclick') && p.getAttribute('onclick').includes(fn);
+        p.classList.toggle('active', !!esActivo);
+    });
 }
 
 // ==========================================
@@ -517,3 +541,291 @@ function setupDragDropExam() {
 document.addEventListener('DOMContentLoaded', () => {
     setupDragDropExam();
 });
+
+// ==========================================================
+// CONTACTOS FAMILIARES DEL PACIENTE (perfil)
+// ==========================================================
+async function cargarContactosFamiliares(rutEnc) {
+    const tbody = document.getElementById('cuerpo-contactos-familiares');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando contactos...</td></tr>';
+
+    try {
+        const familiares = await window.hydraAPI.getFamiliaresDePaciente(rutEnc);
+        if (!familiares || familiares.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin contactos registrados</td></tr>';
+            return;
+        }
+        const legibles = await Promise.all(familiares.map(async (f) => {
+            const [rut, correo, tel] = await Promise.all([
+                desencriptarDato(f.run),
+                desencriptarDato(f.correo),
+                desencriptarDato(f.telefono)
+            ]);
+            return { ...f, run: rut, correo, telefono: tel };
+        }));
+
+        tbody.innerHTML = '';
+        legibles.forEach(f => {
+            const nombre = `${f.nombre || ''} ${f.apellidoPaterno || ''} ${f.apellidoMaterno || ''}`.trim();
+            tbody.innerHTML += `<tr>
+                <td>${nombre || '-'}</td>
+                <td>Familiar</td>
+                <td>${f.telefono || '-'}</td>
+                <td>Correo</td>
+                <td>${f.correo || '-'}</td>
+            </tr>`;
+        });
+    } catch (e) {
+        console.error('Error cargando contactos familiares:', e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Error al cargar contactos.</td></tr>';
+    }
+}
+
+// ==========================================================
+// VINCULAR PACIENTE + FAMILIAR (MANUAL)
+// ==========================================================
+async function abrirModalVincular() {
+    const modal = document.getElementById('modal-vincular-familiar');
+    const resultado = document.getElementById('vincular-resultado');
+    resultado.style.display = 'none';
+    modal.style.display = 'flex';
+
+    const selPaciente = document.getElementById('vincular-paciente-select');
+    const selFamiliar = document.getElementById('vincular-familiar-select');
+    selPaciente.innerHTML = '<option value="">Cargando pacientes...</option>';
+    selFamiliar.innerHTML = '<option value="">Cargando familiares...</option>';
+
+    try {
+        const pacientes = await window.hydraAPI.getPacientes();
+        const opciones = await Promise.all(pacientes.map(async (p) => {
+            const rut = await desencriptarDato(p.runP);
+            const nombre = `${p.nombre || ''} ${p.apellidoPaterno || ''} ${p.apellidoMaterno || ''}`.trim();
+            return `<option value="${p.runP}">${nombre || 'Paciente'} - ${rut}</option>`;
+        }));
+        selPaciente.innerHTML = '<option value="">Selecciona un paciente...</option>' + opciones.join('');
+    } catch (e) {
+        console.error('Error cargando pacientes:', e);
+        selPaciente.innerHTML = '<option value="">Error cargando pacientes</option>';
+    }
+
+    try {
+        const familiares = await window.hydraAPI.getFamiliares();
+        const opciones = await Promise.all(familiares.map(async (f) => {
+            const rut = await desencriptarDato(f.run);
+            const nombre = `${f.nombre || ''} ${f.apellidoPaterno || ''} ${f.apellidoMaterno || ''}`.trim();
+            return `<option value="${f.run}">${nombre || 'Familiar'} - ${rut}</option>`;
+        }));
+        selFamiliar.innerHTML = '<option value="">Selecciona un familiar...</option>' + opciones.join('');
+    } catch (e) {
+        console.error('Error cargando familiares:', e);
+        selFamiliar.innerHTML = '<option value="">Error cargando familiares</option>';
+    }
+}
+
+function cerrarModalVincular() {
+    document.getElementById('modal-vincular-familiar').style.display = 'none';
+}
+
+async function vincularFamiliarPaciente() {
+    const pacienteRun = document.getElementById('vincular-paciente-select').value;
+    const familiarRun = document.getElementById('vincular-familiar-select').value;
+    const resultado = document.getElementById('vincular-resultado');
+
+    if (!pacienteRun || !familiarRun) {
+        resultado.style.display = 'block';
+        resultado.style.background = '#fef2f2';
+        resultado.style.color = '#b91c1c';
+        resultado.innerText = 'Selecciona un paciente y un familiar.';
+        return;
+    }
+
+    resultado.style.display = 'block';
+    resultado.style.background = '#eff6ff';
+    resultado.style.color = '#1d4ed8';
+    resultado.innerText = 'Vinculando...';
+
+      try {
+          await window.hydraAPI.vincularFamiliar(familiarRun, pacienteRun);
+          resultado.style.background = '#f0fdf4';
+          resultado.style.color = '#15803d';
+          resultado.innerText = '✓ Vínculo creado correctamente!';
+          if (pacienteActualData) {
+              cargarContactosFamiliares(pacienteActualData.rutEnc || pacienteActualData.rut);
+          }
+          setTimeout(() => cerrarModalVincular(), 1500);
+      } catch (error) {
+        console.error('Error al vincular:', error);
+        resultado.style.background = '#fef2f2';
+        resultado.style.color = '#b91c1c';
+        resultado.innerText = 'Error: ' + (error.message || 'No se pudo vincular');
+    }
+}
+
+// ==========================================================
+// DIRECTORIO DE FAMILIARES + ALTA DE NUEVO FAMILIAR
+// ==========================================================
+async function encriptarDato(textoLimpio) {
+    if (!textoLimpio) return null;
+    try {
+        const url = `https://hydra-arm-security.onrender.com/api/user/cripto/encrypt?texto=${encodeURIComponent(textoLimpio)}`;
+        const res = await fetch(url, { method: 'GET' });
+        if (!res.ok) throw new Error(`Error en la API de encriptación: ${res.status}`);
+        return await res.text();
+    } catch (e) {
+        console.error("Fallo de seguridad al encriptar:", e);
+        throw new Error("Motor de encriptación apagado o fallando.");
+    }
+}
+
+let listaFamiliaresLegibles = [];
+
+function verDirectorioFamiliares() {
+    document.getElementById('vista-directorio').style.display = 'none';
+    document.getElementById('vista-perfil').style.display = 'none';
+    document.getElementById('vista-directorio-familiares').style.display = 'block';
+    marcaNavActiva('verDirectorioFamiliares');
+    cargarFamiliares();
+}
+
+async function cargarFamiliares() {
+    const tbody = document.getElementById('cuerpo-tabla-familiares');
+    try {
+        const familiares = await window.hydraAPI.getFamiliares();
+        listaFamiliaresLegibles = await Promise.all(familiares.map(async (f) => {
+            const [rut, correo, tel] = await Promise.all([
+                desencriptarDato(f.run),
+                desencriptarDato(f.correo),
+                desencriptarDato(f.telefono)
+            ]);
+            return { ...f, runEnc: f.run, run: rut, correo, telefono: tel };
+        }));
+
+        tbody.innerHTML = '';
+        if (listaFamiliaresLegibles.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No hay familiares registrados.</td></tr>';
+            return;
+        }
+        listaFamiliaresLegibles.forEach((f, i) => {
+            const apP = f.apellidoPaterno || '';
+            const apM = f.apellidoMaterno || '';
+            tbody.innerHTML += `<tr>
+                <td>${f.run}</td><td>${f.nombre || ''}</td><td>${apP}</td><td>${apM}</td>
+                <td>${f.correo}</td><td>${f.telefono}</td><td>${f.edad ?? '-'}</td>
+                <td>${f.genero || '-'}</td>
+                <td style="display:flex; gap:8px;">
+                    <button class="btn-action outline" onclick="verPacientesDeFamiliar(${i})">
+                        <i class="fa-solid fa-users"></i> Ver pacientes
+                    </button>
+                </td>
+            </tr>`;
+        });
+    } catch (e) {
+        console.error('Error cargando familiares:', e);
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);">Error al cargar familiares.</td></tr>';
+    }
+}
+
+async function verPacientesDeFamiliar(i) {
+    const f = listaFamiliaresLegibles[i];
+    if (!f) return;
+    const modal = document.getElementById('modal-pacientes-familiar');
+    const tbody = document.getElementById('cuerpo-pacientes-familiar');
+    document.getElementById('pacientes-familiar-nombre').innerText = `${f.nombre || ''} ${f.apellidoPaterno || ''}`.trim() || '...';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">Cargando pacientes...</td></tr>';
+    modal.style.display = 'flex';
+
+    try {
+        const pacientes = await window.hydraAPI.getPacientesDeFamiliar(f.runEnc);
+        if (!pacientes || pacientes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">Este familiar no tiene pacientes vinculados.</td></tr>';
+            return;
+        }
+        const legibles = await Promise.all(pacientes.map(async (p) => {
+            const rut = await desencriptarDato(p.runP);
+            return { ...p, runP: rut };
+        }));
+        tbody.innerHTML = '';
+        legibles.forEach(p => {
+            const apP = p.apellidoPaterno || '';
+            const apM = p.apellidoMaterno || '';
+            tbody.innerHTML += `<tr><td>${p.runP}</td><td>${p.nombre || ''}</td><td>${apP} ${apM}</td></tr>`;
+        });
+    } catch (e) {
+        console.error('Error cargando pacientes del familiar:', e);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--danger);">Error al cargar pacientes.</td></tr>';
+    }
+}
+
+function cerrarModalPacientesFamiliar() {
+    document.getElementById('modal-pacientes-familiar').style.display = 'none';
+}
+
+function abrirModalNuevoFamiliar() {
+    const modal = document.getElementById('modal-nuevo-familiar');
+    const resultado = document.getElementById('nuevo-familiar-resultado');
+    resultado.style.display = 'none';
+    ['nf-rut', 'nf-nombre', 'nf-apellido-paterno', 'nf-apellido-materno', 'nf-correo', 'nf-telefono', 'nf-password', 'nf-edad'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const gen = document.getElementById('nf-genero');
+    if (gen) gen.value = '';
+    modal.style.display = 'flex';
+}
+
+function cerrarModalNuevoFamiliar() {
+    document.getElementById('modal-nuevo-familiar').style.display = 'none';
+}
+
+async function guardarNuevoFamiliar() {
+    const v = (id) => document.getElementById(id).value.trim();
+    const rut = v('nf-rut'), nombre = v('nf-nombre'), apP = v('nf-apellido-paterno'),
+          apM = v('nf-apellido-materno'), correo = v('nf-correo'), telefono = v('nf-telefono'),
+          password = v('nf-password');
+    const genero = document.getElementById('nf-genero').value;
+    const edadRaw = document.getElementById('nf-edad').value;
+    const resultado = document.getElementById('nuevo-familiar-resultado');
+
+    if (!rut || !nombre || !correo || !telefono || !password) {
+        resultado.style.display = 'block';
+        resultado.style.background = '#fef2f2';
+        resultado.style.color = '#b91c1c';
+        resultado.innerText = 'Completa los campos obligatorios (RUT, Nombre, Correo, Teléfono, Password).';
+        return;
+    }
+
+    resultado.style.display = 'block';
+    resultado.style.background = '#eff6ff';
+    resultado.style.color = '#1d4ed8';
+    resultado.innerText = 'Guardando familiar...';
+
+    try {
+        const [rutE, correoE, telE, passE] = await Promise.all([
+            encriptarDato(rut), encriptarDato(correo), encriptarDato(telefono), encriptarDato(password)
+        ]);
+        const payload = {
+            run: rutE,
+            nombre,
+            apellidoPaterno: apP || null,
+            apellidoMaterno: apM || null,
+            correo: correoE,
+            telefono: telE,
+            genero: genero || null,
+            edad: edadRaw ? parseInt(edadRaw, 10) : null,
+            password: passE
+        };
+        await window.hydraAPI.crearFamiliar(payload);
+        resultado.style.background = '#f0fdf4';
+        resultado.style.color = '#15803d';
+        resultado.innerText = '¡Familiar registrado correctamente!';
+        setTimeout(() => { cerrarModalNuevoFamiliar(); cargarFamiliares(); }, 1500);
+    } catch (e) {
+        console.error('Error al crear familiar:', e);
+        resultado.style.background = '#fef2f2';
+        resultado.style.color = '#b91c1c';
+        resultado.innerText = 'Error: ' + (e.message || 'No se pudo crear el familiar');
+    }
+}
+

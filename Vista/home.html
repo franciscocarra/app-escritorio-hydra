@@ -16,7 +16,7 @@
             <span id="doc-name-sidebar" style="color: var(--text-muted); font-size: 12px; font-weight: 600;">Cargando Médico...</span>
             <nav>
                 <p class="active" onclick="volverAlDirectorio()" style="cursor: pointer;"><i class="fa-solid fa-users"></i> Pacientes</p>
-                <p><i class="fa-solid fa-heart-pulse"></i> Monitor Prótesis</p>
+                <p id="nav-familiares" onclick="verDirectorioFamiliares()" style="cursor: pointer;"><i class="fa-solid fa-people-roof"></i> Familiares</p>
             </nav>
             <div style="margin-top: auto;"><p onclick="window.location.href='Login.html'" style="cursor:pointer; color: var(--danger); font-weight: 600;"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</p></div>
         </div>
@@ -36,6 +36,27 @@
                         <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
                         <tbody id="cuerpo-tabla-pacientes">
                             <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes desde la base de datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="vista-directorio-familiares" style="display: none;">
+                <header class="header-dash" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                    <div>
+                        <h1>Directorio de Familiares</h1>
+                        <span style="color: var(--text-muted); font-size: 13px;">Contactos familiares para alertas y acceso a telemetría</span>
+                    </div>
+                    <button class="btn-action" style="background-color: #2563eb; color: white; border: none; display: flex; gap: 8px; align-items: center;" onclick="abrirModalNuevoFamiliar()">
+                        <i class="fa-solid fa-user-plus"></i> Nuevo Familiar
+                    </button>
+                </header>
+
+                <div class="table-container" style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
+                    <table class="patient-table">
+                        <thead><tr><th>RUT</th><th>Nombre</th><th>A. Paterno</th><th>A. Materno</th><th>Correo</th><th>Teléfono</th><th>Edad</th><th>Género</th><th>Acciones</th></tr></thead>
+                        <tbody id="cuerpo-tabla-familiares">
+                            <tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Cargando familiares desde la base de datos...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -169,10 +190,16 @@
                 </h3>
                 <table class="tabla-perfil">
                     <thead><tr><th>Nombre Familiar</th><th>Vínculo</th><th>Teléfono Alertas</th><th>Canal de Notificación</th><th>Acceso Interfaz</th></tr></thead>
-                    <tbody>
+                    <tbody id="cuerpo-contactos-familiares">
                         <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin contactos registrados</td></tr>
                     </tbody>
                 </table>
+                <div style="display: flex; gap: 15px; margin-top: 15px; background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; align-items: center;">
+                    <button class="btn-action" style="background-color: #2563eb; color: white; border: none; display: flex; gap: 8px; align-items: center;" onclick="abrirModalVincular()">
+                        <i class="fa-solid fa-link"></i> Vincular Paciente + Familiar
+                    </button>
+                    <span style="font-size: 12px; color: #64748b;">Asocia un paciente con un familiar ya registrado para alertas.</span>
+                </div>
 
                 <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
                     <i class="fa-solid fa-hand-holding-medical" style="color: #2563eb;"></i> Módulo: Asignación y Solicitud de Prótesis
@@ -247,6 +274,115 @@
                 <button class="btn-action outline" style="padding: 10px 20px; border: 1px solid #cbd5e1;" onclick="cerrarModalSubida()">Cancelar</button>
                 <button id="btn-subir-examen" class="btn-action" style="background-color: #00b894; color: white; border: none; padding: 10px 20px; display: none;" onclick="subirArchivoExamen()">
                     <i class="fa-solid fa-send"></i> Iniciar Subida
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-vincular-familiar" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2100; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 32px; border-radius: 16px; width: 560px; max-width: 92%; box-shadow: 0 25px 50px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; color: #2563eb; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-link"></i> Vincular Paciente con Familiar</h2>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Asocia un paciente con un familiar ya registrado en el sistema.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Paciente</label>
+                    <select id="vincular-paciente-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; background: white;">
+                        <option value="">Cargando pacientes...</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Familiar</label>
+                    <select id="vincular-familiar-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; background: white;">
+                        <option value="">Cargando familiares...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="vincular-resultado" style="display: none; margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600;"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button class="btn-action outline" onclick="cerrarModalVincular()" style="padding: 10px 20px; border: 1px solid #cbd5e1;">Cancelar</button>
+                <button class="btn-action" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px;" onclick="vincularFamiliarPaciente()">
+                    <i class="fa-solid fa-link"></i> Vincular
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-pacientes-familiar" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2100; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 32px; border-radius: 16px; width: 600px; max-width: 92%; box-shadow: 0 25px 50px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; color: #2563eb; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-users"></i> Pacientes de <span id="pacientes-familiar-nombre" style="text-transform: capitalize;">...</span></h2>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">Pacientes vinculados a este familiar para alertas.</p>
+            <div style="max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="tabla-perfil" style="width: 100%; margin: 0;">
+                    <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th></tr></thead>
+                    <tbody id="cuerpo-pacientes-familiar">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button class="btn-action outline" onclick="cerrarModalPacientesFamiliar()" style="padding: 10px 20px; border: 1px solid #cbd5e1;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nuevo-familiar" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2200; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 32px; border-radius: 16px; width: 560px; max-width: 94%; box-shadow: 0 25px 50px rgba(0,0,0,0.1); max-height: 92vh; overflow-y: auto;">
+            <h2 style="margin-top: 0; color: #2563eb; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-plus"></i> Registrar Nuevo Familiar</h2>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 18px;">Crea un contacto familiar. Los datos sensibles se cifran.</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">RUT *</label>
+                    <input type="text" id="nf-rut" placeholder="12345678-k" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Nombre *</label>
+                    <input type="text" id="nf-nombre" placeholder="Nombre" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Apellido Paterno</label>
+                    <input type="text" id="nf-apellido-paterno" placeholder="Apellido Paterno" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Apellido Materno</label>
+                    <input type="text" id="nf-apellido-materno" placeholder="Apellido Materno" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Correo *</label>
+                    <input type="email" id="nf-correo" placeholder="correo@ejemplo.cl" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Teléfono *</label>
+                    <input type="text" id="nf-telefono" placeholder="912345678" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Género</label>
+                    <select id="nf-genero" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; background: white; box-sizing: border-box;">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                        <option value="O">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Edad</label>
+                    <input type="number" id="nf-edad" placeholder="28" min="0" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+                <div style="grid-column: span 2;">
+                    <label style="display:block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Password *</label>
+                    <input type="password" id="nf-password" placeholder="Contraseña de acceso" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div id="nuevo-familiar-resultado" style="display: none; margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600;"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px;">
+                <button class="btn-action outline" onclick="cerrarModalNuevoFamiliar()" style="padding: 10px 20px; border: 1px solid #cbd5e1;">Cancelar</button>
+                <button class="btn-action" style="background-color: #2563eb; color: white; border: none; padding: 10px 20px;" onclick="guardarNuevoFamiliar()">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Familiar
                 </button>
             </div>
         </div>

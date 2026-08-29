@@ -126,6 +126,10 @@ contextBridge.exposeInMainWorld('hydraAPI', {
     return this.apiCall(`/api/pacientes/${run}`);
   },
 
+  async getFamiliaresDePaciente(run) {
+    return this.apiCall(`/api/pacientes/${run}/familiares`);
+  },
+
   // ── BPM ──
   async getBpmPorRango(runP, inicio, fin) {
     return this.apiCall(`/api/bpm/search?runP=${encodeURIComponent(runP)}&inicio=${encodeURIComponent(inicio)}&fin=${encodeURIComponent(fin)}`);
@@ -161,6 +165,40 @@ contextBridge.exposeInMainWorld('hydraAPI', {
 
   async getPacientesDeFamiliar(run) {
     return this.apiCall(`/api/familiares/${run}/pacientes`);
+  },
+
+  async crearFamiliar(data) {
+    return this.apiCall('/api/familiares', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async vincularFamiliar(familiarRun, pacienteRun) {
+    const url = `${CRUD_URL}/api/familiares/${encodeURIComponent(familiarRun)}/pacientes/${encodeURIComponent(pacienteRun)}`;
+    const token = localStorage.getItem('hydra_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    const res = await fetch(url, { method: 'POST', headers });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      throw new Error(msg || `HTTP ${res.status}`);
+    }
+    return true;
+  },
+
+  async desvincularFamiliar(familiarRun, pacienteRun) {
+    const url = `${CRUD_URL}/api/familiares/${encodeURIComponent(familiarRun)}/pacientes/${encodeURIComponent(pacienteRun)}`;
+    const token = localStorage.getItem('hydra_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    const res = await fetch(url, { method: 'DELETE', headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return true;
   },
 
   // ── Documentos ──

@@ -5,6 +5,13 @@ let pacienteActualData = null;
 let listaRecetaActual = [];
 let archivoExamenSeleccionado = null;
 
+// GPS (API 8082)
+let gpsMapa = null;
+let gpsMarker = null;
+let gpsRuta = null;
+let gpsPollingInterval = null;
+const API_GPS = 'http://localhost:8082/api/geolocalizacion';
+
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosMedico();
     cargarPacientes();
@@ -157,11 +164,21 @@ function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
     // Cambiamos de vista
     document.getElementById('vista-directorio').style.display = 'none';
     document.getElementById('vista-perfil').style.display = 'block';
+
+    // GPS en vivo para el paciente
+    detenerPollingGPS();
+    cargarMapaGPS(rut);
+    gpsPollingInterval = setInterval(function () {
+        if (pacienteActualData && pacienteActualData.rut) {
+            cargarMapaGPS(pacienteActualData.rut);
+        }
+    }, 10000);
 }
 
 function volverAlDirectorio() {
     // Si vuelve a la tabla general, borramos la memoria del paciente activo
     localStorage.removeItem('pacienteActivo');
+    detenerPollingGPS();
     pacienteActualData = null;
 
     document.getElementById('vista-perfil').style.display = 'none';
@@ -826,6 +843,118 @@ async function guardarNuevoFamiliar() {
         resultado.style.background = '#fef2f2';
         resultado.style.color = '#b91c1c';
         resultado.innerText = 'Error: ' + (e.message || 'No se pudo crear el familiar');
+    }
+}
+
+// ==========================================
+// MÓDULO GPS EN VIVO (Leaflet + API 8082)
+// ==========================================
+
+function detenerPollingGPS() {
+    if (gpsPollingInterval) {
+        clearInterval(gpsPollingInterval);
+        gpsPollingInterval = null;
+    }
+}
+
+function destruirMapaGPS() {
+    if (gpsMapa) {
+        gpsMapa.remove();
+        gpsMapa = null;
+        gpsMarker = null;
+        gpsRuta = null;
+    }
+}
+
+function pintarSinSenal(mensaje, detalle) {
+    const contenedor = document.getElementById('mapa-gps-contenedor');
+    const lblSenal = document.getElementById('gps-ultima-senal');
+    if (!contenedor) return;
+    destruirMapaGPS();
+    contenedor.innerHTML = '<div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444;">' +
+        '<i class="fa-solid fa-location-crosshairs" style="font-size:26px; margin-bottom:8px;"></i>' +
+        '<span style="font-size:12px; font-weight:600;">' + mensaje + '</span>' +
+        '<span style="font-size:11px; color:#94a3b8;">' + detalle + '</span></div>';
+    if (lblSenal) {
+        lblSenal.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Sin señal';
+        lblSenal.style.color = '#ef4444';
+    }
+}
+
+async function cargarMapaGPS(rut) {
+    if (!rut) return;
+    const contenedor = document.getElementById('mapa-gps-contenedor');
+    const lblSenal = document.getElementById('gps-ultima-senal');
+    if (!contenedor || !lblSenal) return;
+
+    try {
+        const [resActual, resHistorial] = await Promise.all([
+            fetch(API_GPS + '/' + encodeURIComponent(rut)),
+            fetch(API_GPS + '/' + encodeURIComponent(rut) + '/historial?limite=30')
+        ]);
+
+        const historial = resHistorial.ok ? await resHistorial.json() : [];
+        const puntosRuta = (Array.isArray(historial) ? historial : []).slice().reverse();
+
+        if (!resActual.ok) {
+            pintarSinSenal('Sin señal de prótesis', 'El paciente aún no registra ubicaciones.');
+            return;
+        }
+
+        const ultima = await resActual.json();
+        const lat = parseFloat(ultima.latitud);
+        const lng = parseFloat(ultima.longitud);
+        if (isNaN(lat) || isNaN(lng)) {
+            pintarSinSenal('Sin señal de prótesis', 'El paciente aún no registra ubicaciones.');
+            return;
+        }
+
+        if (!gpsMapa) {
+            contenedor.innerHTML = '';
+            gpsMapa = L.map(contenedor).setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(gpsMapa);
+            gpsMarker = L.marker([lat, lng]).addTo(gpsMapa);
+            setTimeout(function () { if (gpsMapa) gpsMapa.invalidateSize(); }, 150);
+        } else {
+            gpsMapa.setView([lat, lng], Math.max(gpsMapa.getZoom(), 15));
+            gpsMarker.setLatLng([lat, lng]);
+        }
+
+        if (gpsRuta) { gpsMapa.removeLayer(gpsRuta); gpsRuta = null; }
+        const coords = puntosRuta
+            .filter(function (p) { return p.latitud != null && p.longitud != null; })
+            .map(function (p) { return [parseFloat(p.latitud), parseFloat(p.longitud)]; });
+        if (coords.length >= 2) {
+            gpsRuta = L.polyline(coords, { color: '#2563eb', weight: 3, dashArray: '6 4' }).addTo(gpsMapa);
+        }
+
+        const fecha = ultima.fechaReporte ? new Date(ultima.fechaReporte) : new Date();
+        lblSenal.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Señal en vivo - ' +
+            fecha.toLocaleTimeString('es-CL');
+        lblSenal.style.color = '#16a34a';
+
+    } catch (e) {
+        console.error('Error GPS:', e);
+        const contenedorErr = document.getElementById('mapa-gps-contenedor');
+        if (!contenedorErr) return;
+        destruirMapaGPS();
+        contenedorErr.innerHTML = '<div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b;">' +
+            '<i class="fa-solid fa-tower-cell" style="font-size:26px; margin-bottom:8px;"></i>' +
+            '<span style="font-size:12px; font-weight:600;">API de geolocalización no disponible</span>' +
+            '<span style="font-size:11px; color:#94a3b8;">Asegúrate de que el servicio 8082 esté corriendo.</span></div>';
+        if (lblSenal) {
+            lblSenal.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> API no disponible';
+            lblSenal.style.color = '#ef4444';
+        }
+    }
+}
+
+function recargarGPS() {
+    if (pacienteActualData && pacienteActualData.rut) {
+        cargarMapaGPS(pacienteActualData.rut);
     }
 }
 

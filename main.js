@@ -24,10 +24,10 @@ function createWindow() {
         'Content-Security-Policy': [
           "default-src 'self'; " +
           "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; " +
-          "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; " +
+          "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://unpkg.com 'unsafe-inline'; " +
           "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-          "img-src 'self' data: https://*.supabase.co; " +
-          "connect-src 'self' https://hydra-crud.onrender.com https://hydra-arm-security.onrender.com; " +
+          "img-src 'self' data: https://*.supabase.co https://*.tile.openstreetmap.org; " +
+          "connect-src 'self' https://hydra-crud.onrender.com https://hydra-arm-security.onrender.com http://localhost:8082; " +
           "frame-ancestors 'none'"
         ]
       }

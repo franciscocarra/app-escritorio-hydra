@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="../css/tarjeta-perfil.css"> 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div id="app-container">
@@ -177,10 +179,15 @@
                         <p style="font-size: 12px; color: #10b981; margin-top: 5px;"><i class="fa-solid fa-circle-check"></i> Voltaje Estable (BLE)</p>
                     </div>
                     <div class="tarjeta-telemetria" style="padding: 10px;">
-                        <span style="font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; display: block; text-align: left; padding: 10px;"><i class="fa-solid fa-map-location-dot"></i> Ubicación Actual (GPS en Vivo)</span>
-                        <div style="background: #e2e8f0; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <i class="fa-solid fa-location-dot" style="font-size: 30px; color: #ef4444; position: absolute; top: 40%;"></i>
-                            <div style="background: white; padding: 5px 15px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 11px; font-weight: 600; position: absolute; top: 60%;">Prótesis PAC-19283746</div>
+                        <span style="font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; display: block; text-align: left; padding: 10px 10px 0 10px;"><i class="fa-solid fa-map-location-dot"></i> Ubicación Actual (GPS en Vivo)</span>
+                        <div id="mapa-gps-contenedor" style="height: 190px; border-radius: 8px; margin-top: 8px; overflow: hidden; position: relative; background: #e2e8f0;">
+                            <i class="fa-solid fa-location-dot" style="font-size: 30px; color: #94a3b8; position: absolute; top: 40%; left: 47%;"></i>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 0 10px;">
+                            <span id="gps-ultima-senal" style="font-size: 11px; color: #64748b; font-weight: 600;"><i class="fa-solid fa-satellite-dish"></i> Consultando satélites...</span>
+                            <button class="btn-action outline" onclick="recargarGPS()" style="border: 1px solid #cbd5e1; font-size: 11px; padding: 4px 10px;">
+                                <i class="fa-solid fa-rotate-right"></i> Refrescar señal
+                            </button>
                         </div>
                     </div>
                 </div>

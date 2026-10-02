@@ -1290,14 +1290,19 @@ function pintarSinSenal(mensaje, detalle) {
 
 async function cargarMapaGPS(rut) {
     if (!rut) return;
+    let id = rut;
+    if (!/^[0-9a-f]{64}$/.test(id)) {
+        try { const h = await getHashRun(rut); if (h) id = h; } catch (e) { }
+    }
+    if (!id) return;
     const contenedor = document.getElementById('mapa-gps-contenedor');
     const lblSenal = document.getElementById('gps-ultima-senal');
     if (!contenedor || !lblSenal) return;
 
     try {
         const [resActual, resHistorial] = await Promise.all([
-            fetch(API_GPS + '/' + encodeURIComponent(rut)),
-            fetch(API_GPS + '/' + encodeURIComponent(rut) + '/historial?limite=30')
+            fetch(API_GPS + '/' + encodeURIComponent(id)),
+            fetch(API_GPS + '/' + encodeURIComponent(id) + '/historial?limite=30')
         ]);
 
         const historial = resHistorial.ok ? await resHistorial.json() : [];

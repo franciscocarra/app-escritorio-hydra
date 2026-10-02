@@ -2,12 +2,24 @@ const { contextBridge } = require('electron');
 
 const CRUD_URL = 'https://hydra-crud.onrender.com';
 const SECURITY_URL = 'https://hydra-arm-security.onrender.com';
+const REALTIME_URL = 'https://hydra-realtime.onrender.com';
+const GEO_URL = 'https://geolocalizaci-n-1.onrender.com';
+
+// La geolocalización vive en su propio servicio (no en hydra-crud)
+async function geoCall(path) {
+  const res = await fetch(`${GEO_URL}${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Geo HTTP ${res.status}`);
+  return res.json();
+}
 
 function getBaseUrl(endpoint) {
   if (endpoint.startsWith('/api/auth') ||
       endpoint.startsWith('/api/user/cripto') ||
       /\/api\/pacientes\/[^/]+\/documentos/.test(endpoint) ||
-      /\/api\/pacientes\/[^/]+\/perfil/.test(endpoint)) {
+      /\/api\/pacientes\/[^/]+\/perfil/.test(endpoint) ||
+      // Los adjuntos de mensajería viven en hydra-arm-security, no en hydra-crud.
+      endpoint.startsWith('/api/mensajes/adjuntos')) {
     return SECURITY_URL;
   }
   return CRUD_URL;
@@ -71,7 +83,14 @@ contextBridge.exposeInMainWorld('hydraAPI', {
       }
     }
 
-    return res.json();
+    // Algunos endpoints responden 404/204 sin cuerpo (p. ej. sin datos de un paciente)
+    const texto = await res.text();
+    if (!texto) return null;
+    try {
+      return JSON.parse(texto);
+    } catch (e) {
+      return texto;
+    }
   },
 
   // ── Login (JWT) ──
@@ -131,8 +150,13 @@ contextBridge.exposeInMainWorld('hydraAPI', {
   },
 
   // ── BPM ──
-  async getBpmPorRango(runP, inicio, fin) {
-    return this.apiCall(`/api/bpm/search?runP=${encodeURIComponent(runP)}&inicio=${encodeURIComponent(inicio)}&fin=${encodeURIComponent(fin)}`);
+  // Snapshot del BPM actual. runP llega CIFRADO (igual que la columna).
+  async getBpmActual(runP) {
+    return this.apiCall(`/api/bpm/${encodeURIComponent(runP)}`);
+  },
+
+  async getHistorialBpm(runP, limite) {
+    return this.apiCall(`/api/bpm/${encodeURIComponent(runP)}/historial?limite=${limite || 100}`);
   },
 
   async postBpm(data) {
@@ -227,5 +251,97 @@ contextBridge.exposeInMainWorld('hydraAPI', {
   // ── Foto perfil ──
   async getFoto(runP) {
     return this.apiCall(`/api/pacientes/${runP}/perfil`);
+  },
+
+  // ── Mensajes (CRUD hydra_crud) ──
+  async getConversacion(runA, runB) {
+    return this.apiCall(`/api/mensajes/conversacion?runA=${encodeURIComponent(runA)}&runB=${encodeURIComponent(runB)}`);
+  },
+
+  async noLeidos(destinoRun, rolDestino) {
+    return this.apiCall(`/api/mensajes/no-leidos?destinoRun=${encodeURIComponent(destinoRun)}&rolDestino=${encodeURIComponent(rolDestino)}`);
+  },
+
+  async enviarMensaje(data) {
+    return this.apiCall('/api/mensajes', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  /**
+   * SHA-256 determinista de un RUN. El RUN cifrado de los mensajes no sale
+   * del servidor, así que comparamos los mensajes por su hash.
+   */
+  async getHashRun(run) {
+    return this.apiCall(`/api/user/cripto/hash?run=${encodeURIComponent(run)}`);
+  },
+
+  // ── Adjuntos de mensajes (hydra-arm-security) ──
+  async subirAdjuntoMensaje(runA, runB, archivo) {
+    const token = localStorage.getItem('hydra_token');
+
+    const formData = new FormData();
+    formData.append('archivo', archivo, archivo.name);
+    formData.append('runA', runA);
+    formData.append('runB', runB);
+
+    const res = await fetch(`${SECURITY_URL}/api/mensajes/adjuntos`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Error al subir el adjunto');
+    }
+    return res.json();
+  },
+
+  async eliminarAdjunto(url) {
+    const token = localStorage.getItem('hydra_token');
+    const res = await fetch(`${SECURITY_URL}/api/mensajes/adjuntos?url=${encodeURIComponent(url)}`, {
+      method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  async marcarLeido(id) {
+    const url = `${CRUD_URL}/api/mensajes/${id}/leer`;
+    const token = localStorage.getItem('hydra_token');
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  async eliminarMensaje(id) {
+    const url = `${CRUD_URL}/api/mensajes/${id}`;
+    const token = localStorage.getItem('hydra_token');
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return true;
+  },
+
+  // ── Geolocalización (servicio geolocalizaci-n) ──
+  async getUbicacionActual(runP) {
+    return geoCall(`/api/geolocalizacion/${encodeURIComponent(runP)}`);
+  },
+
+  async getHistorialGeo(runP, limite) {
+    return geoCall(`/api/geolocalizacion/${encodeURIComponent(runP)}/historial?limite=${limite || 200}`);
   }
 });

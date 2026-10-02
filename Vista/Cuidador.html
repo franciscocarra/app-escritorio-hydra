@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         /* Estilo para la burbuja de notificación estilo App */
         .badge-notificacion {
@@ -56,13 +57,66 @@
                     <i class="fa-solid fa-comments" style="color: #2563eb;"></i> Módulo: Bitácora y Mensajería de Pacientes Asignados
                 </h3>
                 <div style="display: block; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 13px; color: #475569; font-weight: 600;">
+                            <i class="fa-solid fa-user-heart"></i> Paciente en Monitoreo:
+                            <strong id="monitor-paciente-actual" style="color: #2563eb; margin-left: 5px;">Seleccione un paciente</strong>
+                        </span>
+                    </div>
                     <div class="table-container" style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
                         <table class="patient-table" style="width: 100%;">
-                            <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones de Contacto</th></tr></thead>
+                            <thead><tr><th>RUT</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Acciones</th></tr></thead>
                             <tbody id="tabla-pacientes-cuidador">
                                 <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Cargando pacientes...</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-map-location-dot" style="color: #10b981;"></i> Módulo: Ubicación GPS en Vivo
+                </h3>
+                <div style="display: block; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 13px; color: #64748b; font-weight: 600;">
+                            <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> Última ubicación del paciente seleccionado
+                        </span>
+                        <span id="geo-estado" style="font-size: 11px; color: #94a3b8;">Esperando datos GPS...</span>
+                    </div>
+                    <div id="mapa-cuidador" style="height: 300px; border-radius: 8px; background: #e2e8f0;"></div>
+                </div>
+
+                <h3 style="color: var(--text-main); display: flex; align-items: center; gap: 10px; font-size: 18px;">
+                    <i class="fa-solid fa-heart-pulse" style="color: #ef4444;"></i> Módulo: Frecuencia Cardíaca en Vivo
+                </h3>
+                <div style="display: block; margin-top: 15px; margin-bottom: 30px; background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 13px; color: #64748b; font-weight: 600;">
+                            <i class="fa-solid fa-heart-pulse" style="color: #ef4444;"></i> BPM del paciente en tiempo real
+                        </span>
+                        <span id="bpm-estado" style="font-size: 11px; color: #94a3b8;">Esperando datos BPM...</span>
+                    </div>
+                    <div id="bpm-indicador" style="display: flex; align-items: center; gap: 20px; padding: 25px; border-radius: 8px; border: 2px solid #e2e8f0; background: #f8fafc;">
+                        <i class="fa-solid fa-heart" style="font-size: 40px; color: #ef4444;"></i>
+                        <div>
+                            <span id="bpm-valor" style="font-size: 48px; font-weight: 700; color: #1e293b;">--</span>
+                            <span style="font-size: 18px; color: #64748b; margin-left: 5px;">BPM</span>
+                        </div>
+                        <div style="margin-left: auto; text-align: right;">
+                            <span style="font-size: 12px; color: #94a3b8; display: block;">Estado</span>
+                            <span id="bpm-clasificacion" style="font-size: 14px; font-weight: 600; color: #10b981;">Esperando...</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 20px; padding: 20px; margin-top: 12px; border-radius: 8px; border: 2px solid #e2e8f0; background: #f8fafc;">
+                        <i class="fa-solid fa-lungs" style="font-size: 34px; color: #0ea5e9;"></i>
+                        <div>
+                            <span id="spo2-valor" style="font-size: 36px; font-weight: 700; color: #1e293b;">--</span>
+                            <span style="font-size: 16px; color: #64748b; margin-left: 5px;">% SpO₂</span>
+                        </div>
+                        <div style="margin-left: auto; text-align: right;">
+                            <span style="font-size: 12px; color: #94a3b8; display: block;">Saturación</span>
+                            <span id="spo2-estado" style="font-size: 14px; font-weight: 600; color: #10b981;">Esperando...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -75,9 +129,7 @@
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">1. Seleccionar Paciente Afectado</label>
                                 <select id="alerta-paciente" onchange="renderizarCanalAlertas()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-size: 13px;">
-                                    <option value="Luis Jofré Aguirre">Luis Jofré Aguirre (21.799.988-k)</option>
-                                    <option value="Valentina Morales Castro">Valentina Morales Castro (19.432.105-8)</option>
-                                    <option value="Andrés Sepúlveda Rojas">Andrés Sepúlveda Rojas (15.890.334-2)</option>
+                                    <option value="">Seleccione un paciente</option>
                                 </select>
                             </div>
                             <div>
@@ -131,8 +183,8 @@
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <div style="width: 45px; height: 45px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fa-solid fa-user"></i></div>
                             <div>
-                                <h3 style="margin: 0; color: #0f172a; font-size: 16px;" id="chat-nombre-paciente">Cargando...</h3>
-                                <span style="font-size: 12px; color: #10b981; font-weight: 600;"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> En línea (Prótesis Conectada)</span>
+<h3 style="margin: 0; color: #0f172a; font-size: 16px;" id="chat-nombre-paciente">Cargando...</h3>
+                                        <span id="chat-en-linea" style="font-size: 12px; color: #94a3b8; font-weight: 600;"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> Conectando al puente realtime...</span>
                             </div>
                         </div>
                         
@@ -141,25 +193,24 @@
                         </button>
                     </div>
 
-                    <div style="flex-grow: 1; background: #ffffff; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;">
-                        <p style="text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 20px;">HOY</p>
-                        
-                        <div class="chat-burbuja chat-paciente">
-                            <strong>Paciente:</strong><br>
-                            Hola, tengo una molestia en el ajuste del encaje, siento un pequeño pinchazo al doblar el codo.
-                            <span style="display: block; text-align: right; font-size: 10px; opacity: 0.7; margin-top: 4px;">09:15 AM</span>
-                        </div>
-                        
-                        <div class="chat-burbuja chat-cuidador">
-                            <strong>Tú:</strong><br>
-                            Entendido. No hagas esfuerzos pesados. Voy de camino a tu domicilio para revisar la calibración mecánica.
-                            <span style="display: block; text-align: right; font-size: 10px; opacity: 0.8; margin-top: 4px;">09:18 AM</span>
-                        </div>
+                    <div id="mensajes-chat" style="flex-grow: 1; background: #ffffff; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;">
+                        <p style="text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 20px;">Cargando conversación...</p>
+                    </div>
+
+                    <div id="preview-adjunto-cuidador" style="display: none; background: #f8fafc; padding: 10px 15px; border-top: 1px solid #e2e8f0; align-items: center; gap: 10px;">
+                        <img id="img-preview-cuidador" style="max-height: 64px; border-radius: 8px; border: 1px solid #e2e8f0;" alt="Vista previa">
+                        <button class="btn-action outline" style="padding: 6px 12px; font-size: 12px;" onclick="quitarAdjuntoCuidador()">
+                            <i class="fa-solid fa-xmark"></i> Quitar
+                        </button>
                     </div>
 
                     <div style="background: #f8fafc; padding: 15px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;">
-                        <input type="text" placeholder="Escribe un mensaje al paciente..." style="flex-grow: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; font-family: 'Inter', sans-serif;">
-                        <button class="btn-action" style="background: #2563eb; color: white; border: none; width: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="alert('Mensaje enviado al smartphone del paciente.')">
+                        <input type="file" id="input-adjunto-cuidador" accept="image/*" capture="environment" style="display: none;" onchange="onFileSelectedCuidador(event)">
+                        <button class="btn-action" style="background: #64748b; color: white; border: none; width: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="document.getElementById('input-adjunto-cuidador').click()" title="Adjuntar foto">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+                        <input id="chat-input" type="text" placeholder="Escribe un mensaje al paciente..." style="flex-grow: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; font-family: 'Inter', sans-serif;">
+                        <button class="btn-action" style="background: #2563eb; color: white; border: none; width: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="enviarMensajeChat()">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
                     </div>
@@ -182,6 +233,8 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../js/realtime.js"></script>
     <script src="../js/cuidador.js"></script>
 </body>
 </html>

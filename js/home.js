@@ -4,6 +4,14 @@
 let pacienteActualData = null;
 let listaRecetaActual = [];
 let archivoExamenSeleccionado = null;
+let runMedicoCache = null;
+let pollingChatMedicoInterval = null;
+
+// ── Mapa Leaflet ──
+let mapaMedico = null;
+let markerMedico = null;
+let polylineMedico = null;
+const MAPA_MEDICO_INICIAL = [-33.4489, -70.6693];
 
 // GPS (API 8082)
 let gpsMapa = null;
@@ -15,6 +23,7 @@ const API_GPS = 'http://localhost:8082/api/geolocalizacion';
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosMedico();
     cargarPacientes();
+    conectarRealtimeMedico();
 
     // MAGIA: Si la URL dice "?return=perfil", significa que venimos del Dashboard.
     // Restauramos automáticamente el perfil del paciente.
@@ -23,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const pacGuardado = localStorage.getItem('pacienteActivo');
         if(pacGuardado) {
             const p = JSON.parse(pacGuardado);
-            abrirPerfil(p.nombre, p.apP, p.apM, p.rut, p.fono);
+            abrirPerfil(p.nombre, p.apP, p.apM, p.rut, p.fono, p.rutEnc);
         }
     }
 
@@ -78,6 +87,9 @@ async function cargarPacientes() {
                         </button>
                         <button class="btn-action" style="background-color: #8b5cf6; color: white; border: none; display: flex; align-items: center; gap: 5px;" onclick="irAlDashboard('${nombreCompleto}', '${p.runPEncriptado}', '${p.runP}')">
                             <i class="fa-solid fa-chart-line"></i> Dashboard
+                        </button>
+                            <button class="btn-action" style="background-color: #10b981; color: white; border: none; display: flex; align-items: center; gap: 5px;" onclick="abrirChatMedico('${nombreCompleto}', '${p.runP}', '${p.runPEncriptado}')">
+                            <i class="fa-solid fa-comment-dots"></i> Chat
                         </button>
                     </td>
                 </tr>`;
@@ -139,10 +151,13 @@ async function cargarDocumentos(rutEnc) {
 // 2. INTERCAMBIO DE VISTAS (TABLA <-> PERFIL)
 // ==========================================
 function abrirPerfil(nombre, apP, apM, rut, fono, rutEnc) {
-    // Memoria del paciente actual
-    const pacObj = { nombre, apP, apM, rut, fono };
+    // Memoria del paciente actual.
+    //   rutEnc = RUN cifrado -> lo que sigue guardando la tabla bpm (ESP32)
+    //   rut    = RUN plano   -> de donde sale el SHA-256 de geolocalizacion
+    const pacObj = { nombre, apP, apM, rut, fono, rutEnc: rutEnc || rut };
     localStorage.setItem('pacienteActivo', JSON.stringify(pacObj));
     pacienteActualData = { nombreCompleto: `${nombre} ${apP}`, rut: rut, rutEnc: rutEnc || rut };
+    getHashRun(pacienteActualData.rut).then(h => { hashRunPacienteActual = h; });
 
     // Inyectamos iniciales y datos en cabecera
     const iniciales = `${nombre.charAt(0).toUpperCase()}${apP.charAt(0).toUpperCase()}`;
@@ -181,14 +196,35 @@ function volverAlDirectorio() {
     detenerPollingGPS();
     pacienteActualData = null;
 
+    // Reiniciamos la telemetría para no dejar datos del paciente anterior
+    if (markerMedico) { mapaMedico?.removeLayer(markerMedico); markerMedico = null; }
+    if (polylineMedico) { mapaMedico?.removeLayer(polylineMedico); polylineMedico = null; }
+    limpiarTelemetriaMedico();
+    // Sin esto, los eventos del paciente anterior seguiríanABILitando el filtro
+    hashRunPacienteActual = '';
+
     document.getElementById('vista-perfil').style.display = 'none';
     document.getElementById('vista-directorio').style.display = 'block';
     document.getElementById('vista-directorio-familiares').style.display = 'none';
+    const vistaChat = document.getElementById('vista-chat-medico');
+    if (vistaChat) vistaChat.style.display = 'none';
 
     marcaNavActiva('volverAlDirectorio');
 
     // Limpiamos la URL para que no se quede pegado el "?return=perfil"
     window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function limpiarTelemetriaMedico() {
+    const set = (id, valor) => { const el = document.getElementById(id); if (el) el.textContent = valor; };
+    set('bpm-valor-medico', '--');
+    set('spo2-valor-medico', '--');
+    set('bpm-clasificacion-medico', 'Esperando...');
+    set('spo2-clasificacion-medico', 'Esperando...');
+    const geo = document.getElementById('geo-estado-medico');
+    if (geo) geo.innerHTML = 'Esperando datos GPS...';
+    const bpm = document.getElementById('bpm-estado-medico');
+    if (bpm) bpm.innerHTML = 'Esperando datos BPM...';
 }
 
 function marcaNavActiva(fn) {
@@ -197,6 +233,377 @@ function marcaNavActiva(fn) {
         const esActivo = p.getAttribute('onclick') && p.getAttribute('onclick').includes(fn);
         p.classList.toggle('active', !!esActivo);
     });
+}
+
+// ==========================================
+// CHAT DEL MÉDICO (mensajes realtime sobre hydra_realtime)
+// ==========================================
+async function getRunMedico() {
+    if (runMedicoCache) return runMedicoCache;
+    const usuario = JSON.parse(localStorage.getItem('hydraUser') || 'null');
+    if (usuario && usuario.run) {
+        try { runMedicoCache = await window.hydraAPI.decrypt(usuario.run); }
+        catch (e) { runMedicoCache = null; }
+    }
+    return runMedicoCache || '';
+}
+
+function abrirChatMedico(nombreCompleto, rutPaciente, rutEnc) {
+    pacienteActualData = { nombreCompleto: nombreCompleto, rut: rutPaciente, rutEnc: rutEnc || rutPaciente };
+    // Los eventos SSE de geolocalizacion se filtran por hash, no por el RUN
+    // cifrado. Se pide antes de que empiece a llegar el stream.
+    getHashRun(pacienteActualData.rut).then(h => { hashRunPacienteActual = h; });
+
+    document.getElementById('vista-directorio').style.display = 'none';
+    document.getElementById('vista-perfil').style.display = 'none';
+    document.getElementById('vista-directorio-familiares').style.display = 'none';
+
+    document.getElementById('chat-medico-nombre').innerText = nombreCompleto;
+    document.getElementById('vista-chat-medico').style.display = 'block';
+
+    if (typeof quitarAdjuntoMedico === 'function') quitarAdjuntoMedico();
+
+    cargarConversacionMedico();
+    clearInterval(pollingChatMedicoInterval);
+    pollingChatMedicoInterval = setInterval(() => cargarConversacionMedico(true), 5000);
+}
+
+async function cargarConversacionMedico(silent = false) {
+    const contenedor = document.getElementById('mensajes-chat-medico');
+    if (!contenedor) return;
+    const runMedico = await getRunMedico();
+
+    if (!silent) {
+        contenedor.innerHTML = '<p style="text-align: center; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 20px;">Cargando conversación...</p>';
+    }
+
+    try {
+        const historial = await window.hydraAPI.getConversacion(runMedico, pacienteActualData.rut);
+        renderMensajesMedico(historial || []);
+        marcarLeidosMedico(runMedico, historial || []);
+    } catch (e) {
+        console.error('Error cargando conversación:', e);
+        if (!silent) {
+            contenedor.innerHTML = '<p style="text-align: center; color: var(--danger); margin-top: 50px;">No se pudo cargar la conversación.</p>';
+        }
+    }
+}
+
+function renderMensajesMedico(historial) {
+    const contenedor = document.getElementById('mensajes-chat-medico');
+    if (!contenedor) return;
+
+    if (!historial || historial.length === 0) {
+        contenedor.innerHTML = '<p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 50px;">Aún no hay mensajes. Envía el primero para iniciar la conversación.</p>';
+        return;
+    }
+
+    contenedor.innerHTML = historial.map(m => {
+        const esDeMi = m.rolOrigen === 'medico';
+        const autor = esDeMi ? 'Tú' : (m.rolOrigen === 'familiar' ? 'Familiar' : 'Paciente');
+        const hora = m.creadoEn ? new Date(m.creadoEn).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '';
+        const bolita = m.leido ? '' : ' <span style="font-size: 9px; color: #ef4444;">●</span>';
+        const foto = m.adjuntoUrl
+            ? `<img src="${m.adjuntoUrl}" style="display: block; max-width: 260px; max-height: 260px; border-radius: 10px; margin-bottom: 6px;" alt="Foto adjunta">`
+            : '';
+        const texto = m.contenido
+            ? `<strong>${autor}:</strong><br>${escapeHtmlMensaje(m.contenido)}`
+            : `<strong>${autor}:</strong><br><em style="opacity: 0.7;">Envió una foto</em>`;
+        return `<div class="chat-burbuja ${esDeMi ? 'chat-cuidador' : 'chat-paciente'}">
+            ${foto}
+            ${texto}
+            <span style="display: block; text-align: right; font-size: 10px; opacity: 0.7; margin-top: 4px;">${hora}${bolita}</span>
+        </div>`;
+    }).join('');
+
+    contenedor.scrollTop = contenedor.scrollHeight;
+}
+
+function escapeHtmlMensaje(texto) {
+    const div = document.createElement('div');
+    div.textContent = texto == null ? '' : texto;
+    return div.innerHTML;
+}
+
+/** SHA-256 del RUN, cacheado: el RUN cifrado de los mensajes no sale del servidor. */
+const _hashRunCache = {};
+async function getHashRun(run) {
+    if (!run) return '';
+    if (_hashRunCache[run]) return _hashRunCache[run];
+    try {
+        const h = await window.hydraAPI.getHashRun(run);
+        _hashRunCache[run] = h;
+        return h;
+    } catch (e) {
+        return '';
+    }
+}
+
+/**
+ * SHA-256 del paciente abierto. La tabla geolocalizacion guarda el hash, no el
+ * RUN cifrado, así que hace falta para filtrar sus eventos SSE.
+ * Se rellena al seleccionar un paciente y se limpia al salir del perfil.
+ */
+let hashRunPacienteActual = '';
+
+async function marcarLeidosMedico(runMedico, historial) {
+    // El REST omite el hash del RUN; usamos el rol de destino para saber cuales son entrantes.
+    const pendientes = (historial || []).filter(m => !m.leido && m.rolDestino === 'medico');
+    for (const m of pendientes) {
+        try { await window.hydraAPI.marcarLeido(m.id); } catch (e) { /* CORS/despliegue pendiente */ }
+    }
+}
+
+// ── Adjuntos de foto (médico) ──
+let archivoAdjuntoMedico = null;
+
+function onFileSelectedMedico(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        alert('Solo se pueden adjuntar imágenes.');
+        event.target.value = '';
+        return;
+    }
+    archivoAdjuntoMedico = file;
+
+    const preview = document.getElementById('preview-adjunto-medico');
+    const img = document.getElementById('img-preview-medico');
+    if (preview && img) {
+        const reader = new FileReader();
+        reader.onload = (e) => { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+        preview.style.display = 'flex';
+    }
+}
+
+function quitarAdjuntoMedico() {
+    archivoAdjuntoMedico = null;
+    const input = document.getElementById('input-adjunto-medico');
+    if (input) input.value = '';
+    const preview = document.getElementById('preview-adjunto-medico');
+    if (preview) preview.style.display = 'none';
+}
+
+async function enviarMensajeMedico() {
+    const input = document.getElementById('chat-medico-input');
+    const texto = (input.value || '').trim();
+    const foto = archivoAdjuntoMedico;
+    if (!texto && !foto) return;
+
+    const runMedico = await getRunMedico();
+    if (!runMedico) { alert('No se pudo identificar tu RUN. Vuelve a iniciar sesión.'); return; }
+
+    let adjuntoUrl = null;
+    try {
+        // Paso 1: subir la foto. La carpeta se deriva del hash de ambos RUN.
+        if (foto) {
+            const info = await window.hydraAPI.subirAdjuntoMensaje(runMedico, pacienteActualData.rut, foto);
+            adjuntoUrl = info.url;
+        }
+
+        // Paso 2: crear el mensaje. Si falla, borramos el adjunto huérfano.
+        await window.hydraAPI.enviarMensaje({
+            remitenteRun: runMedico,
+            rolOrigen: 'medico',
+            destinatarioRun: pacienteActualData.rut,
+            rolDestino: 'paciente',
+            contenido: texto || null,
+            adjuntoUrl: adjuntoUrl,
+            adjuntoNombre: foto ? foto.name : null
+        });
+
+        input.value = '';
+        quitarAdjuntoMedico();
+        cargarConversacionMedico();
+    } catch (e) {
+        console.error('Error enviando mensaje:', e);
+        if (adjuntoUrl) {
+            try { await window.hydraAPI.eliminarAdjunto(adjuntoUrl); } catch (e2) { /* archivo huérfano */ }
+        }
+        alert('No se pudo enviar el mensaje: ' + (e.message || 'error de conexión'));
+    }
+}
+
+function volverDeChatMedico() {
+    clearInterval(pollingChatMedicoInterval);
+    pollingChatMedicoInterval = null;
+    if (typeof quitarAdjuntoMedico === 'function') quitarAdjuntoMedico();
+    document.getElementById('vista-chat-medico').style.display = 'none';
+    document.getElementById('vista-directorio').style.display = 'block';
+}
+
+function conectarRealtimeMedico() {
+    if (!window.HydraRT) { console.warn('realtime.js no cargado'); return; }
+    HydraRT.conectar({
+        eventos: ['hello', 'mensajes', 'geolocalizacion', 'bpm'],
+        handlers: {
+            hello: function () {
+                const el = document.getElementById('chat-medico-enlinea');
+                if (el) { el.style.color = '#10b981'; el.innerHTML = '<i class="fa-solid fa-circle" style="font-size: 8px;"></i> En línea (puente realtime conectado)'; }
+                iniciarMapaMedico();
+            },
+            mensajes: manejarMensajeMedico,
+            geolocalizacion: manejarGeolocalizacionMedico,
+            bpm: manejarBpmMedico
+        }
+    });
+}
+
+// ── Mapa Leaflet ──
+function iniciarMapaMedico() {
+    const el = document.getElementById('mapa-medico');
+    if (!el || mapaMedico) return;
+
+    mapaMedico = L.map(el).setView(MAPA_MEDICO_INICIAL, 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(mapaMedico);
+
+    const icono = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+    });
+
+    markerMedico = L.marker(MAPA_MEDICO_INICIAL, { icon: icono }).addTo(mapaMedico)
+        .bindPopup('<b>Paciente</b>');
+
+    setTimeout(() => mapaMedico?.invalidateSize(), 300);
+}
+
+// Llave común: solo acepta eventos del paciente abierto en el perfil.
+// El SSE reenvía la fila cruda de Postgres, así que el identificador llega en
+// snake_case. OJO: cada tabla guarda algo distinto, por eso hay dos funciones:
+//   - bpm            -> sigue guardando el RUN CIFRADO (la escribe el ESP32)
+//   - geolocalizacion-> guarda el SHA-256 del RUN
+function esBpmDelPacienteActual(fila) {
+    return !!pacienteActualData?.rutEnc && !!fila
+        && fila.paciente_run_p === pacienteActualData.rutEnc;
+}
+
+function esGeoDelPacienteActual(fila) {
+    if (!fila || !pacienteActualData?.rut || !hashRunPacienteActual) return false;
+    return fila.paciente_run_p === hashRunPacienteActual;
+}
+
+function manejarGeolocalizacionMedico(payload) {
+    const fila = payload && payload.new;
+    if (!fila || !fila.latitud || !fila.longitud) return;
+    if (!esGeoDelPacienteActual(fila)) return;
+
+    if (!mapaMedico) iniciarMapaMedico();
+
+    const posicion = [fila.latitud, fila.longitud];
+    if (markerMedico) {
+        markerMedico.setLatLng(posicion);
+        mapaMedico.panTo(posicion);
+    }
+    if (markerMedico && pacienteActualData?.nombreCompleto) {
+        markerMedico.bindPopup(`<b>${pacienteActualData.nombreCompleto}</b>`);
+    }
+
+    if (!polylineMedico) {
+        polylineMedico = L.polyline([posicion], { color: '#2563eb', weight: 3, opacity: 0.7 }).addTo(mapaMedico);
+    } else {
+        polylineMedico.addLatLng(posicion);
+    }
+
+    const el = document.getElementById('geo-estado-medico');
+    if (el) {
+        const hora = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        el.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Actualizado ${hora}`;
+    }
+}
+
+// ── BPM en tiempo real ──
+function manejarBpmMedico(payload) {
+    const fila = payload && payload.new;
+    if (!fila) return;
+    if (!esBpmDelPacienteActual(fila)) return;
+
+    const valor = fila.valor_bpm;
+    const spo2 = fila.spo2;
+    if (valor == null && spo2 == null) return;
+
+    if (valor != null) {
+        const el = document.getElementById('bpm-valor-medico');
+        if (el) el.textContent = valor;
+
+        const clasificacion = document.getElementById('bpm-clasificacion-medico');
+        if (clasificacion) {
+            if (valor < 60) {
+                clasificacion.textContent = 'Bradicardia';
+                clasificacion.style.color = '#f59e0b';
+            } else if (valor > 100) {
+                clasificacion.textContent = 'Taquicardia';
+                clasificacion.style.color = '#ef4444';
+            } else {
+                clasificacion.textContent = 'Normal';
+                clasificacion.style.color = '#10b981';
+            }
+        }
+
+        const indicador = document.getElementById('bpm-indicador-medico');
+        if (indicador) {
+            indicador.style.borderColor = valor < 60 ? '#f59e0b' : (valor > 100 ? '#ef4444' : '#10b981');
+        }
+    }
+
+    if (spo2 != null) {
+        const elSpo2 = document.getElementById('spo2-valor-medico');
+        if (elSpo2) elSpo2.textContent = spo2;
+
+        const estadoSpo2 = document.getElementById('spo2-clasificacion-medico');
+        if (estadoSpo2) {
+            if (spo2 < 90) {
+                estadoSpo2.textContent = 'Crítico';
+                estadoSpo2.style.color = '#ef4444';
+            } else if (spo2 < 94) {
+                estadoSpo2.textContent = 'Bajo';
+                estadoSpo2.style.color = '#f59e0b';
+            } else {
+                estadoSpo2.textContent = 'Normal';
+                estadoSpo2.style.color = '#10b981';
+            }
+        }
+    }
+
+    const estado = document.getElementById('bpm-estado-medico');
+    if (estado) {
+        const hora = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        estado.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Actualizado ${hora}`;
+    }
+}
+
+async function manejarMensajeMedico(payload) {
+    const fila = payload && payload.new;
+    if (!fila) return;
+
+    // El SSE reenvía la fila cruda de Postgres: los nombres van en snake_case y
+    // remitente_run ya contiene el SHA-256, no el RUN cifrado.
+    const runMedico = await getRunMedico();
+    const hashMedico = await getHashRun(runMedico);
+    if (!hashMedico) return;
+
+    const remitente = fila.remitente_run;
+    const destinatario = fila.destinatario_run;
+
+    const meConcierne = remitente === hashMedico || destinatario === hashMedico;
+    if (!meConcierne) return;
+
+    const hashPaciente = pacienteActualData ? await getHashRun(pacienteActualData.rut) : '';
+    const chatAbierto = document.getElementById('vista-chat-medico').style.display === 'block';
+    const esDelPacienteActual = chatAbierto && hashPaciente && remitente === hashPaciente;
+
+    if (esDelPacienteActual) {
+        cargarConversacionMedico();
+        try { await window.hydraAPI.marcarLeido(fila.id); } catch (e) {}
+    } else if (destinatario === hashMedico) {
+        console.log('Nuevo mensaje recibido de', fila.rol_origen);
+    }
 }
 
 // ==========================================

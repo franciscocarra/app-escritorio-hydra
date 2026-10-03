@@ -13,12 +13,12 @@ let markerMedico = null;
 let polylineMedico = null;
 const MAPA_MEDICO_INICIAL = [-33.4489, -70.6693];
 
-// GPS (API 8082)
+// GPS (servicio en Render; misma URL que preload.js y js/realtime.js)
 let gpsMapa = null;
 let gpsMarker = null;
 let gpsRuta = null;
 let gpsPollingInterval = null;
-const API_GPS = 'http://localhost:8082/api/geolocalizacion';
+const API_GPS = 'https://geolocalizaci-n-1.onrender.com/api/geolocalizacion';
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosMedico();

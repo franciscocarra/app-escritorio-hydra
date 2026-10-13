@@ -342,13 +342,13 @@ async function marcarLeidosDeChat(runCuidador, historial) {
     }
 }
 
-/** SHA-256 del RUN, cacheado: el RUN cifrado de los mensajes no sale del servidor. */
+/** SHA-256 del RUN, calculado localmente (ver js/realtime.js) y cacheado. */
 const _hashRunCache = {};
 async function getHashRun(run) {
     if (!run) return '';
     if (_hashRunCache[run]) return _hashRunCache[run];
     try {
-        const h = await window.hydraAPI.getHashRun(run);
+        const h = (typeof window.hydraHashRun === 'function') ? window.hydraHashRun(run) : '';
         _hashRunCache[run] = h;
         return h;
     } catch (e) {

@@ -191,17 +191,23 @@ function actualizarEncabezadoMonitor() {
 
 // Llave común: descarta cualquier evento que no sea del paciente elegido.
 // OJO: cada tabla guarda algo distinto, por eso hay dos funciones.
-// El SSE reenvía la fila cruda de Postgres, así que el identificador va en
-// snake_case.
+// El identificador llega con nombres distintos según el origen:
+//   - SSE del puente        -> camelCase (pacienteRunP)
+//   - Snapshot REST de geo  -> rutPaciente
+//   - Código antiguo        -> snake_case (paciente_run_p)
 //   - bpm             -> sigue guardando el RUN CIFRADO (la escribe el ESP32)
 //   - geolocalizacion -> guarda el SHA-256 del RUN
+function idRunFila(fila) {
+    return (fila && (fila.paciente_run_p || fila.pacienteRunP || fila.rutPaciente)) || '';
+}
+
 function esBpmMonitoreado(fila) {
-    return !!pacienteMonitorId && !!fila && fila.paciente_run_p === pacienteMonitorId;
+    return !!pacienteMonitorId && !!fila && idRunFila(fila) === pacienteMonitorId;
 }
 
 function esGeoMonitoreado(fila) {
     if (!fila || !pacienteMonitorHash || !pacienteMonitorRut) return false;
-    return fila.paciente_run_p === pacienteMonitorHash;
+    return idRunFila(fila) === pacienteMonitorHash;
 }
 
 function poblarSelectAlertas() {
@@ -522,7 +528,7 @@ function manejarBpm(payload) {
     if (!fila) return;
     if (!esBpmMonitoreado(fila)) return;
 
-    const valor = fila.valor_bpm;
+    const valor = fila.valor_bpm ?? fila.valorBpm;
     const spo2 = fila.spo2;
     if (valor == null && spo2 == null) return;
 

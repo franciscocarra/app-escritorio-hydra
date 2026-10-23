@@ -475,18 +475,25 @@ function iniciarMapaMedico() {
 }
 
 // Llave común: solo acepta eventos del paciente abierto en el perfil.
-// El SSE reenvía la fila cruda de Postgres, así que el identificador llega en
-// snake_case. OJO: cada tabla guarda algo distinto, por eso hay dos funciones:
+// El identificador llega con nombres distintos según el origen:
+//   - SSE del puente        -> camelCase (pacienteRunP)
+//   - Snapshot REST de geo  -> rutPaciente
+//   - Código antiguo        -> snake_case (paciente_run_p)
+// OJO: cada tabla guarda algo distinto, por eso hay dos funciones:
 //   - bpm            -> sigue guardando el RUN CIFRADO (la escribe el ESP32)
 //   - geolocalizacion-> guarda el SHA-256 del RUN
+function idRunFila(fila) {
+    return (fila && (fila.paciente_run_p || fila.pacienteRunP || fila.rutPaciente)) || '';
+}
+
 function esBpmDelPacienteActual(fila) {
     return !!pacienteActualData?.rutEnc && !!fila
-        && fila.paciente_run_p === pacienteActualData.rutEnc;
+        && idRunFila(fila) === pacienteActualData.rutEnc;
 }
 
 function esGeoDelPacienteActual(fila) {
     if (!fila || !pacienteActualData?.rut || !hashRunPacienteActual) return false;
-    return fila.paciente_run_p === hashRunPacienteActual;
+    return idRunFila(fila) === hashRunPacienteActual;
 }
 
 function manejarGeolocalizacionMedico(payload) {
@@ -524,7 +531,7 @@ function manejarBpmMedico(payload) {
     if (!fila) return;
     if (!esBpmDelPacienteActual(fila)) return;
 
-    const valor = fila.valor_bpm;
+    const valor = fila.valor_bpm ?? fila.valorBpm;
     const spo2 = fila.spo2;
     if (valor == null && spo2 == null) return;
 
